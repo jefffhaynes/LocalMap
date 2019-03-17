@@ -3,6 +3,7 @@
 // Licensed under the Microsoft Public License (Ms-PL)
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 #if WINDOWS_UWP
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Media;
@@ -35,15 +36,17 @@ namespace MapControl
             set { SetValue(LocationsProperty, value); }
         }
 
-        protected override void UpdateData()
+        protected override Task UpdateDataAsync()
         {
             var figures = ((PathGeometry)Data).Figures;
             figures.Clear();
 
-            if (ParentMap != null)
+            if (GetParentMap() != null)
             {
                 AddPolylineLocations(figures, Locations, true);
             }
+
+            return Task.CompletedTask;
         }
     }
 }

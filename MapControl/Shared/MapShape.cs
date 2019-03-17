@@ -3,6 +3,7 @@
 // Licensed under the Microsoft Public License (Ms-PL)
 
 #if WINDOWS_UWP
+using System.Threading.Tasks;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Media;
 #else
@@ -27,47 +28,45 @@ namespace MapControl
         /// </summary>
         public Location Location
         {
-            get { return (Location)GetValue(LocationProperty); }
-            set { SetValue(LocationProperty, value); }
+            get => (Location)GetValue(LocationProperty);
+            set => SetValue(LocationProperty, value);
         }
 
-        private void LocationPropertyChanged()
+        private async void LocationPropertyChanged()
         {
-            if (parentMap != null)
+            if (_parentMap != null)
             {
-                UpdateData();
+                await UpdateDataAsync();
             }
         }
 
-        private MapBase parentMap;
+        private MapBase _parentMap;
 
-        public MapBase ParentMap
+        public MapBase GetParentMap() => _parentMap;
+
+        public Task SetParentMapAsync(MapBase map)
         {
-            get { return parentMap; }
-            set
+            if (_parentMap != null)
             {
-                if (parentMap != null)
-                {
-                    parentMap.ViewportChanged -= OnViewportChanged;
-                }
-
-                parentMap = value;
-
-                if (parentMap != null)
-                {
-                    parentMap.ViewportChanged += OnViewportChanged;
-                }
-
-                UpdateData();
+                _parentMap.ViewportChanged -= OnViewportChanged;
             }
+
+            _parentMap = map;
+
+            if (_parentMap != null)
+            {
+                _parentMap.ViewportChanged += OnViewportChanged;
+            }
+
+            return UpdateDataAsync();
         }
 
-        private void OnViewportChanged(object sender, ViewportChangedEventArgs e)
+        private async void OnViewportChanged(object sender, ViewportChangedEventArgs e)
         {
-            UpdateData();
+            await UpdateDataAsync();
         }
 
-        protected abstract void UpdateData();
+        protected abstract Task UpdateDataAsync();
 
         protected MapShape()
             : this(new PathGeometry())
@@ -83,7 +82,7 @@ namespace MapControl
 
         protected Point LocationToPoint(Location location)
         {
-            var point = parentMap.MapProjection.LocationToPoint(location);
+            var point = _parentMap.MapProjection.LocationToPoint(location);
 
             if (point.Y == double.PositiveInfinity)
             {
@@ -99,21 +98,21 @@ namespace MapControl
 
         protected Point LocationToViewportPoint(Location location)
         {
-            return parentMap.MapProjection.ViewportTransform.Transform(LocationToPoint(location));
+            return _parentMap.MapProjection.ViewportTransform.Transform(LocationToPoint(location));
         }
 
         protected double GetLongitudeOffset()
         {
             var longitudeOffset = 0d;
 
-            if (parentMap.MapProjection.IsNormalCylindrical && Location != null)
+            if (_parentMap.MapProjection.IsNormalCylindrical && Location != null)
             {
                 var viewportPosition = LocationToViewportPoint(Location);
 
-                if (viewportPosition.X < 0d || viewportPosition.X > parentMap.RenderSize.Width ||
-                    viewportPosition.Y < 0d || viewportPosition.Y > parentMap.RenderSize.Height)
+                if (viewportPosition.X < 0d || viewportPosition.X > _parentMap.RenderSize.Width ||
+                    viewportPosition.Y < 0d || viewportPosition.Y > _parentMap.RenderSize.Height)
                 {
-                    var nearestLongitude = Location.NearestLongitude(Location.Longitude, parentMap.Center.Longitude);
+                    var nearestLongitude = Location.NearestLongitude(Location.Longitude, _parentMap.Center.Longitude);
 
                     longitudeOffset = nearestLongitude - Location.Longitude;
                 }

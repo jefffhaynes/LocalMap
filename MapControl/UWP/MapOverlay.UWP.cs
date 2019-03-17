@@ -2,6 +2,7 @@
 // © 2018 Clemens Fischer
 // Licensed under the Microsoft Public License (Ms-PL)
 
+using System.Threading.Tasks;
 using Windows.UI.Text;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Data;
@@ -56,7 +57,7 @@ namespace MapControl
         public static readonly DependencyProperty StrokeMiterLimitProperty = DependencyProperty.Register(
             nameof(StrokeMiterLimit), typeof(double), typeof(MapOverlay), new PropertyMetadata(1d));
 
-        protected override void SetParentMap(MapBase map)
+        public override Task SetParentMapAsync(MapBase map)
         {
             if (map != null)
             {
@@ -73,7 +74,7 @@ namespace MapControl
                 }
             }
 
-            base.SetParentMap(map);
+            return base.SetParentMapAsync(map);
         }
     }
 }

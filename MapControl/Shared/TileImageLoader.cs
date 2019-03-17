@@ -53,7 +53,7 @@ namespace MapControl
         /// If the TileSource's SourceName is non-empty and its UriFormat starts with "http", tile images are cached in the
         /// TileImageLoader's Cache.
         /// </summary>
-        public void LoadTilesAsync(MapTileLayer tileLayer)
+        public Task LoadTilesAsync(MapTileLayer tileLayer)
         {
             pendingTiles.Clear();
 
@@ -88,6 +88,8 @@ namespace MapControl
 
                 //Debug.WriteLine("{0}: {1} tasks", Environment.CurrentManagedThreadId, taskCount);
             }
+
+            return Task.CompletedTask;
         }
 
         private async Task LoadTilesAsync(Func<Tile, Task> loadTileImageFunc)

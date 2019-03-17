@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Windows.Data.Xml.Dom;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Media;
+
 #else
 using System.Xml;
 using System.Windows;
@@ -19,46 +20,46 @@ using System.Windows.Media;
 
 namespace MapControl
 {
-    public partial class WmsImageLayer : MapImageLayer
+    public class WmsImageLayer : MapImageLayer
     {
         public static readonly DependencyProperty ServiceUriProperty = DependencyProperty.Register(
             nameof(ServiceUri), typeof(Uri), typeof(WmsImageLayer),
-            new PropertyMetadata(null, async (o, e) => await ((WmsImageLayer)o).UpdateImageAsync()));
+            new PropertyMetadata(null, async (o, e) => await ((WmsImageLayer) o).UpdateImageAsync()));
 
         public static readonly DependencyProperty LayersProperty = DependencyProperty.Register(
             nameof(Layers), typeof(string), typeof(WmsImageLayer),
-            new PropertyMetadata(string.Empty, async (o, e) => await ((WmsImageLayer)o).UpdateImageAsync()));
+            new PropertyMetadata(string.Empty, async (o, e) => await ((WmsImageLayer) o).UpdateImageAsync()));
 
         public static readonly DependencyProperty StylesProperty = DependencyProperty.Register(
             nameof(Styles), typeof(string), typeof(WmsImageLayer),
-            new PropertyMetadata(string.Empty, async (o, e) => await ((WmsImageLayer)o).UpdateImageAsync()));
+            new PropertyMetadata(string.Empty, async (o, e) => await ((WmsImageLayer) o).UpdateImageAsync()));
 
         public static readonly DependencyProperty FormatProperty = DependencyProperty.Register(
             nameof(Format), typeof(string), typeof(WmsImageLayer),
-            new PropertyMetadata("image/png", async (o, e) => await ((WmsImageLayer)o).UpdateImageAsync()));
+            new PropertyMetadata("image/png", async (o, e) => await ((WmsImageLayer) o).UpdateImageAsync()));
 
         public Uri ServiceUri
         {
-            get { return (Uri)GetValue(ServiceUriProperty); }
-            set { SetValue(ServiceUriProperty, value); }
+            get => (Uri) GetValue(ServiceUriProperty);
+            set => SetValue(ServiceUriProperty, value);
         }
 
         public string Layers
         {
-            get { return (string)GetValue(LayersProperty); }
-            set { SetValue(LayersProperty, value); }
+            get => (string) GetValue(LayersProperty);
+            set => SetValue(LayersProperty, value);
         }
 
         public string Styles
         {
-            get { return (string)GetValue(StylesProperty); }
-            set { SetValue(StylesProperty, value); }
+            get => (string) GetValue(StylesProperty);
+            set => SetValue(StylesProperty, value);
         }
 
         public string Format
         {
-            get { return (string)GetValue(FormatProperty); }
-            set { SetValue(FormatProperty, value); }
+            get => (string) GetValue(FormatProperty);
+            set => SetValue(FormatProperty, value);
         }
 
         public async Task<IList<string>> GetLayerNamesAsync()
@@ -103,7 +104,7 @@ namespace MapControl
         protected override async Task<ImageSource> GetImageAsync(BoundingBox boundingBox)
         {
             ImageSource imageSource = null;
-            var projectionParameters = ParentMap.MapProjection.WmsQueryParameters(boundingBox);
+            var projectionParameters = GetParentMap().MapProjection.WmsQueryParameters(boundingBox);
 
             if (ServiceUri != null && !string.IsNullOrEmpty(projectionParameters))
             {
@@ -154,7 +155,7 @@ namespace MapControl
 
         private static IEnumerable<XmlElement> ChildElements(XmlElement element, string name)
         {
-            return element.ChildNodes.OfType<XmlElement>().Where(e => (string)e.LocalName == name);
+            return element.ChildNodes.OfType<XmlElement>().Where(e => (string) e.LocalName == name);
         }
     }
 }

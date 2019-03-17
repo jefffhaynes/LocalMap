@@ -4,6 +4,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 #if WINDOWS_UWP
 using Windows.Foundation;
 using Windows.UI.Xaml;
@@ -22,7 +23,8 @@ namespace MapControl
     /// </summary>
     public interface IMapElement
     {
-        MapBase ParentMap { get; set; }
+        Task SetParentMapAsync(MapBase map);
+        MapBase GetParentMap();
     }
 
     /// <summary>
@@ -37,7 +39,7 @@ namespace MapControl
         public static readonly DependencyProperty BoundingBoxProperty = DependencyProperty.RegisterAttached(
             "BoundingBox", typeof(BoundingBox), typeof(MapPanel), new PropertyMetadata(null, BoundingBoxPropertyChanged));
 
-        private MapBase parentMap;
+        private MapBase _parentMap;
 
         public MapPanel()
         {
@@ -69,27 +71,25 @@ namespace MapControl
             return (Point?)element.GetValue(ViewportPositionProperty);
         }
 
-        public MapBase ParentMap
-        {
-            get { return parentMap; }
-            set { SetParentMap(value); }
-        }
+        public MapBase GetParentMap() => _parentMap;
 
-        protected virtual void SetParentMap(MapBase map)
+        public virtual Task SetParentMapAsync(MapBase map)
         {
-            if (parentMap != null && parentMap != this)
+            if (_parentMap != null && _parentMap != this)
             {
-                parentMap.ViewportChanged -= OnViewportChanged;
+                _parentMap.ViewportChanged -= OnViewportChanged;
             }
 
-            parentMap = map;
+            _parentMap = map;
 
-            if (parentMap != null && parentMap != this)
+            if (_parentMap != null && _parentMap != this)
             {
-                parentMap.ViewportChanged += OnViewportChanged;
+                _parentMap.ViewportChanged += OnViewportChanged;
 
                 OnViewportChanged(new ViewportChangedEventArgs());
             }
+
+            return Task.CompletedTask;
         }
 
         private void OnViewportChanged(object sender, ViewportChangedEventArgs e)
@@ -124,11 +124,11 @@ namespace MapControl
 
                 if ((location = GetLocation(element)) != null)
                 {
-                    viewportPosition = ArrangeElementWithLocation(element, parentMap, location);
+                    viewportPosition = ArrangeElementWithLocation(element, _parentMap, location);
                 }
                 else if ((boundingBox = GetBoundingBox(element)) != null)
                 {
-                    ArrangeElementWithBoundingBox(element, parentMap, boundingBox);
+                    ArrangeElementWithBoundingBox(element, _parentMap, boundingBox);
                 }
                 else
                 {
@@ -141,13 +141,11 @@ namespace MapControl
             return finalSize;
         }
 
-        private static void ParentMapPropertyChanged(DependencyObject obj, DependencyPropertyChangedEventArgs e)
+        private static async void ParentMapPropertyChanged(DependencyObject obj, DependencyPropertyChangedEventArgs e)
         {
-            var mapElement = obj as IMapElement;
-
-            if (mapElement != null)
+            if (obj is IMapElement mapElement)
             {
-                mapElement.ParentMap = e.NewValue as MapBase;
+                await mapElement.SetParentMapAsync(e.NewValue as MapBase);
             }
         }
 
@@ -205,9 +203,6 @@ namespace MapControl
                 case HorizontalAlignment.Stretch:
                     rect.Width = parentSize.Width;
                     break;
-
-                default:
-                    break;
             }
 
             switch (element.VerticalAlignment)
@@ -222,9 +217,6 @@ namespace MapControl
 
                 case VerticalAlignment.Stretch:
                     rect.Height = parentSize.Height;
-                    break;
-
-                default:
                     break;
             }
 
@@ -269,9 +261,6 @@ namespace MapControl
                 case HorizontalAlignment.Right:
                     rect.X -= rect.Width;
                     break;
-
-                default:
-                    break;
             }
 
             switch (element.VerticalAlignment)
@@ -282,9 +271,6 @@ namespace MapControl
 
                 case VerticalAlignment.Bottom:
                     rect.Y -= rect.Height;
-                    break;
-
-                default:
                     break;
             }
 
@@ -339,13 +325,11 @@ namespace MapControl
             element.Height = rect.Height;
             element.Arrange(rect);
 
-            var rotateTransform = element.RenderTransform as RotateTransform;
-
-            if (rotateTransform != null)
+            if (element.RenderTransform is RotateTransform rotateTransform)
             {
                 rotateTransform.Angle = rotation;
             }
-            else if (rotation != 0d)
+            else if (Math.Abs(rotation) > double.Epsilon)
             {
                 rotateTransform = new RotateTransform { Angle = rotation };
                 element.RenderTransform = rotateTransform;

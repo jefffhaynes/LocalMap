@@ -24,13 +24,14 @@ namespace MapControl
         /// </summary>
         public double MinLineDistance
         {
-            get { return (double)GetValue(MinLineDistanceProperty); }
-            set { SetValue(MinLineDistanceProperty, value); }
+            get => (double)GetValue(MinLineDistanceProperty);
+            set => SetValue(MinLineDistanceProperty, value);
         }
 
         private double GetLineDistance()
         {
-            var pixelPerDegree = ParentMap.MapProjection.ViewportScale * ParentMap.MapProjection.TrueScale;
+            var parentMap = GetParentMap();
+            var pixelPerDegree = parentMap.MapProjection.ViewportScale * parentMap.MapProjection.TrueScale;
             var minDistance = MinLineDistance / pixelPerDegree;
             var scale = 1d;
 

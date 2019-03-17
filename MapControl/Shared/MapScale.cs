@@ -26,9 +26,9 @@ namespace MapControl
         public static readonly DependencyProperty PaddingProperty = DependencyProperty.Register(
             nameof(Padding), typeof(Thickness), typeof(MapScale), new PropertyMetadata(new Thickness(4)));
 
-        private readonly Polyline line = new Polyline();
+        private readonly Polyline _line = new Polyline();
 
-        private readonly TextBlock label = new TextBlock
+        private readonly TextBlock _label = new TextBlock
         {
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top,
@@ -40,28 +40,29 @@ namespace MapControl
             IsHitTestVisible = false;
             MinWidth = 100d;
 
-            line.SetBinding(Shape.StrokeProperty, GetBinding(StrokeProperty, nameof(Stroke)));
-            line.SetBinding(Shape.StrokeThicknessProperty, GetBinding(StrokeThicknessProperty, nameof(StrokeThickness)));
+            _line.SetBinding(Shape.StrokeProperty, GetBinding(StrokeProperty, nameof(Stroke)));
+            _line.SetBinding(Shape.StrokeThicknessProperty, GetBinding(StrokeThicknessProperty, nameof(StrokeThickness)));
 #if WINDOWS_UWP
-            label.SetBinding(TextBlock.ForegroundProperty, GetBinding(ForegroundProperty, nameof(Foreground)));
+            _label.SetBinding(TextBlock.ForegroundProperty, GetBinding(ForegroundProperty, nameof(Foreground)));
 #endif
-            Children.Add(line);
-            Children.Add(label);
+            Children.Add(_line);
+            Children.Add(_label);
         }
 
         public Thickness Padding
         {
-            get { return (Thickness)GetValue(PaddingProperty); }
-            set { SetValue(PaddingProperty, value); }
+            get => (Thickness)GetValue(PaddingProperty);
+            set => SetValue(PaddingProperty, value);
         }
 
         protected override Size MeasureOverride(Size availableSize)
         {
             var size = new Size();
 
-            if (ParentMap != null && ParentMap.ScaleTransform.ScaleX > 0d)
+            var parentMap = GetParentMap();
+            if (parentMap != null && parentMap.ScaleTransform.ScaleX > 0d)
             {
-                var length = MinWidth / ParentMap.ScaleTransform.ScaleX;
+                var length = MinWidth / parentMap.ScaleTransform.ScaleX;
                 var magnitude = Math.Pow(10d, Math.Floor(Math.Log10(length)));
 
                 if (length / magnitude < 2d)
@@ -77,7 +78,7 @@ namespace MapControl
                     length = 10d * magnitude;
                 }
 
-                size.Width = length * ParentMap.ScaleTransform.ScaleX + StrokeThickness + Padding.Left + Padding.Right;
+                size.Width = length * parentMap.ScaleTransform.ScaleX + StrokeThickness + Padding.Left + Padding.Right;
                 size.Height = 1.25 * FontSize + StrokeThickness + Padding.Top + Padding.Bottom;
 
                 var x1 = Padding.Left + StrokeThickness / 2d;
@@ -85,19 +86,19 @@ namespace MapControl
                 var y1 = size.Height / 2d;
                 var y2 = size.Height - Padding.Bottom - StrokeThickness / 2d;
 
-                line.Points = new PointCollection
+                _line.Points = new PointCollection
                 {
                     new Point(x1, y1),
                     new Point(x1, y2),
                     new Point(x2, y2),
                     new Point(x2, y1)
                 };
-                line.Measure(size);
+                _line.Measure(size);
 
-                label.Text = length >= 1000d ? string.Format("{0:0} km", length / 1000d) : string.Format("{0:0} m", length);
-                label.Width = size.Width;
-                label.Height = size.Height;
-                label.Measure(size);
+                _label.Text = length >= 1000d ? $"{length / 1000d:0} km" : $"{length:0} m";
+                _label.Width = size.Width;
+                _label.Height = size.Height;
+                _label.Measure(size);
             }
 
             return size;

@@ -14,12 +14,12 @@ namespace MapControl
 {
     public abstract partial class MapShape : Path
     {
-        protected void DataCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        protected async void DataCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            UpdateData();
+            await UpdateDataAsync();
         }
 
-        protected void DataCollectionPropertyChanged(DependencyPropertyChangedEventArgs e)
+        protected async void DataCollectionPropertyChanged(DependencyPropertyChangedEventArgs e)
         {
             INotifyCollectionChanged collection;
 
@@ -33,7 +33,7 @@ namespace MapControl
                 collection.CollectionChanged += DataCollectionChanged;
             }
 
-            UpdateData();
+            await UpdateDataAsync();
         }
 
         protected void AddPolylineLocations(PathFigureCollection figures, IEnumerable<Location> locations, bool closed)
@@ -52,7 +52,8 @@ namespace MapControl
                     points.Add(points[0]);
                 }
 
-                var viewport = new Rect(0, 0, ParentMap.RenderSize.Width, ParentMap.RenderSize.Height);
+                var parentMap = GetParentMap();
+                var viewport = new Rect(0, 0, parentMap.RenderSize.Width, parentMap.RenderSize.Height);
                 PathFigure figure = null;
                 PolyLineSegment segment = null;
 
