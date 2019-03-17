@@ -14,41 +14,126 @@ namespace MapboxStyle
 
     public abstract class KeyedFilter : Filter
     {
+        private readonly string _key;
+
         protected KeyedFilter(string key)
         {
-            Key = key;
+            _key = key;
         }
 
-        public string Key { get; }
-
-        public override bool Evaluate(FilterType featureType, string featureId, IDictionary<string, string> featureProperties)
+        public override bool Evaluate(FilterType featureType, string featureId,
+            IDictionary<string, string> featureProperties)
         {
-            var properties = featureProperties.ToDictionary(pair => pair.Key, pair => pair.Value);
-            properties.Add("$type", featureType.ToString());
-            properties.Add("$id", featureId);
-            return OnEvaluate(properties);
+            if (_key == "$type")
+            {
+                OnEvaluate(featureType.ToString());
+            }
+            else if (_key == "$id")
+            {
+                OnEvaluate(featureId);
+            }
+            else if (featureProperties.TryGetValue(_key, out string value))
+            {
+                OnEvaluate(value);
+            }
+
+            return false;
         }
 
-        protected abstract bool OnEvaluate(IDictionary<string, string> properties);
+        protected abstract bool OnEvaluate(string value);
+    }
+
+    public abstract class ExistentialFilter : KeyedFilter
+    {
+        protected ExistentialFilter(string key) : base(key)
+        {
+        }
+
+        protected override bool OnEvaluate(string value)
+        {
+            return OnEvaluate();
+        }
+
+        protected abstract bool OnEvaluate();
+    }
+
+    public class HasExistentialFilter : ExistentialFilter
+    {
+        public HasExistentialFilter(string key) : base(key)
+        {
+        }
+
+        protected override bool OnEvaluate()
+        {
+            return true;
+        }
+    }
+
+    public class HasNotExistentialFilter : ExistentialFilter
+    {
+        public HasNotExistentialFilter(string key) : base(key)
+        {
+        }
+
+        protected override bool OnEvaluate()
+        {
+            return false;
+        }
+    }
+
+    public abstract class MembershipFilter : KeyedFilter
+    {
+        private readonly IEnumerable<string> _values;
+
+        protected MembershipFilter(string key, IEnumerable<string> values) : base(key)
+        {
+            _values = values;
+        }
+        
+        protected override bool OnEvaluate(string value)
+        {
+            return OnEvaluate(value, _values);
+        }
+
+        protected abstract bool OnEvaluate(string left, IEnumerable<string> right);
+    }
+
+    public class InMembershipFilter : MembershipFilter
+    {
+        public InMembershipFilter(string key, IEnumerable<string> values) : base(key, values)
+        {
+        }
+
+        protected override bool OnEvaluate(string left, IEnumerable<string> right)
+        {
+            return right.Contains(left);
+        }
+    }
+
+    public class NotInMembershipFilter : MembershipFilter
+    {
+        public NotInMembershipFilter(string key, IEnumerable<string> values) : base(key, values)
+        {
+        }
+
+        protected override bool OnEvaluate(string left, IEnumerable<string> right)
+        {
+            return !right.Contains(left);
+        }
     }
 
     public abstract class ComparisonFilter : KeyedFilter
     {
+        private readonly string _value;
+
         protected ComparisonFilter(string key, string value) : base(key)
         {
-            Value = value;
+            _value = value;
         }
 
-        public string Value { get; }
-
-        protected override bool OnEvaluate(IDictionary<string, string> properties)
+        protected override bool OnEvaluate(string value)
         {
-            if (!properties.TryGetValue(Key, out string value))
-            {
-                return false;
-            }
-
-            return OnEvaluate(Value, value);
+            return OnEvaluate(value, _value);
         }
 
         protected abstract bool OnEvaluate(string left, string right);
