@@ -1,16 +1,19 @@
-﻿using Newtonsoft.Json;
+﻿using System.Runtime.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace MapboxStyle
 {
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum LineJoin
     {
-        [JsonProperty("bevel")]
+        [EnumMember(Value = "bevel")]
         Bevel,
 
-        [JsonProperty("round")]
+        [EnumMember(Value = "round")]
         Round,
 
-        [JsonProperty("miter")]
+        [EnumMember(Value = "miter")]
         Miter
     }
 }

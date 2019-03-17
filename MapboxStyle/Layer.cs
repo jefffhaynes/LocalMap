@@ -16,7 +16,16 @@ namespace MapboxStyle
         [JsonProperty("type")]
         public LayerType Type { get; set; }
 
+        [JsonProperty("minzoom")]
+        public double MinimumZoom { get; set; }
+
+        [JsonProperty("maxzoom")]
+        public double MaximumZoom { get; set; }
+
         [JsonProperty("paint")]
         public Paint Paint { get; set; }
+
+        [JsonProperty("filter")]
+        public Filter Filter { get; set; }
     }
 }
