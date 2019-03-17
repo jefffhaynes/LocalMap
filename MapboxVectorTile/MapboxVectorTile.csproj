@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GeoJSON" Version="1.2.1" />
+    <PackageReference Include="Google.Protobuf" Version="3.7.0" />
+    <PackageReference Include="Google.Protobuf.Tools" Version="3.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="GeoJSON">
+      <HintPath>..\..\..\..\.nuget\packages\geojson\1.2.1\lib\netstandard2.0\GeoJSON.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
