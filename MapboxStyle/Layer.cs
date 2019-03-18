@@ -25,6 +25,9 @@ namespace MapboxStyle
         [JsonProperty("paint")]
         public Paint Paint { get; set; }
 
+        [JsonProperty("layout")]
+        public Layout Layout { get; set; }
+
         [JsonProperty("filter")]
         public Filter Filter { get; set; }
     }

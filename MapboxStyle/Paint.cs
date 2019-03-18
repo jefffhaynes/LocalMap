@@ -35,12 +35,6 @@ namespace MapboxStyle
         [JsonProperty("fill-pattern")]
         public string FillPattern { get; set; }
 
-        [JsonProperty("line-cap")]
-        public LineCap? LineCap { get; set; }
-
-        [JsonProperty("line-join")]
-        public LineJoin? LineJoin { get; set; }
-
         [JsonProperty("line-miter-limit")]
         public DoubleFunction LineMiterLimit { get; set; }
 

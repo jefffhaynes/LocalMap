@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Storage.Streams;
@@ -85,17 +84,29 @@ namespace MapTest
                                                                styleLayer.Filter.Evaluate(filterType, feature.Id,
                                                                    attributes)).ToList();
 
+            var zoom = tile.ZoomLevel;
+
             var activeLayer = activeLayers.FirstOrDefault();
+
+            if (activeLayer == null && feature.GeometryType != VectorTile.Tile.Types.GeomType.Point)
+            {
+                return;
+            }
+
             var paint = activeLayer?.Paint;
-            var color = paint?.FillColor?.GetValue(tile.ZoomLevel);
-            var fillColor = Convert(color);
-            color = paint?.LineColor?.GetValue(tile.ZoomLevel);
-            var lineColor = Convert(color);
-            color = paint?.TextColor?.GetValue(tile.ZoomLevel);
-            var textColor = Convert(color);
+            var color = paint?.FillColor?.GetValue(zoom);
+            var fillColor = Convert(color) ?? Colors.Black;
+            color = paint?.LineColor?.GetValue(zoom);
+            var lineColor = Convert(color) ?? Colors.Black;
+            color = paint?.TextColor?.GetValue(zoom);
+            var lineWidth = (float?) paint?.LineWidth?.GetValue(zoom) ?? 1.0f;
+            var textColor = Convert(color) ?? Colors.Black;
+
+            var layout = activeLayer?.Layout;
+            var fontSize = (float?) layout?.TextSize?.GetValue(zoom) ?? 16.0f;
+            var fontFamily = layout?.TextFont?.FirstOrDefault();
 
             attributes.TryGetValue("name", out var name);
-
 
             switch (feature.GeometryType)
             {
@@ -106,14 +117,20 @@ namespace MapTest
                     {
                         var center = point.First().ToVector2(scale);
 
-                        if (name != null && textColor.HasValue)
+                        if (name != null)
                         {
-                            session.DrawText(name, center, textColor.Value,
-                                new CanvasTextFormat
-                                {
-                                    HorizontalAlignment = CanvasHorizontalAlignment.Center,
-                                    FontSize = 9
-                                });
+                            var format = new CanvasTextFormat
+                            {
+                                HorizontalAlignment = CanvasHorizontalAlignment.Center,
+                                FontSize = fontSize
+                            };
+
+                            if (fontFamily != null)
+                            {
+                                format.FontFamily = fontFamily;
+                            }
+
+                            session.DrawText(name, center, textColor, format);
                         }
                     }
 
@@ -146,14 +163,23 @@ namespace MapTest
                         {
                             if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
                             {
-                                if (fillColor.HasValue)
-                                {
-                                    session.FillGeometry(geometry, fillColor.Value);
-                                }
+                                    session.FillGeometry(geometry, fillColor);
                             }
-                            else if (lineColor.HasValue)
+                            else
                             {
-                                session.DrawGeometry(geometry, lineColor.Value);
+                                var strokeStyle = new CanvasStrokeStyle();
+
+                                if (layout?.LineDashArray != null)
+                                {
+                                    strokeStyle.CustomDashStyle = layout.LineDashArray.ToArray();
+                                }
+
+                                if (layout?.LineCap != null)
+                                {
+                                    strokeStyle.StartCap = strokeStyle.EndCap = Convert(layout.LineCap.Value);
+                                }
+
+                                session.DrawGeometry(geometry, lineColor, lineWidth);
                             }
                         }
                     }
@@ -187,6 +213,21 @@ namespace MapTest
             }
 
             return null;
+        }
+
+        private static CanvasCapStyle Convert(LineCap lineCap)
+        {
+            switch (lineCap)
+            {
+                case LineCap.Butt:
+                    return CanvasCapStyle.Flat;
+                case LineCap.Round:
+                    return CanvasCapStyle.Round;
+                case LineCap.Square:
+                    return CanvasCapStyle.Square;
+                default:
+                    return CanvasCapStyle.Flat;
+            }
         }
     }
 }

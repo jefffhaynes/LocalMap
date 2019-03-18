@@ -13,6 +13,11 @@ namespace Mapbox.Vector.Tile
 		public string Name { get; set; }
 		public uint Version { get; set; }
 		public uint Extent { get; set; }
-	}
+
+        public override string ToString()
+        {
+            return Name;
+        }
+    }
 }
 
