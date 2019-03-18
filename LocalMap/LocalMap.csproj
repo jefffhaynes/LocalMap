@@ -7,8 +7,8 @@
     <ProjectGuid>{D5F9B34B-0228-4343-8679-A9CC76D8F9F4}</ProjectGuid>
     <OutputType>AppContainerExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>MapTest</RootNamespace>
-    <AssemblyName>MapTest</AssemblyName>
+    <RootNamespace>LocalMap</RootNamespace>
+    <AssemblyName>LocalMap</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
     <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.17763.0</TargetPlatformVersion>
@@ -135,9 +135,9 @@
       <SubType>Designer</SubType>
     </AppxManifest>
     <None Include="MapTest_TemporaryKey.pfx" />
-    <None Include="style.json">
+    <EmbeddedResource Include="style.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Properties\Default.rd.xml" />

@@ -10,6 +10,7 @@ using Windows.UI.Xaml.Media.Imaging;
 using Mapbox.Vector.Tile;
 using MapboxStyle;
 using MapControl;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.Text;
@@ -18,156 +19,173 @@ namespace MapTest
 {
     public static class TileRasterer
     {
-        private static readonly Dictionary<string, Color> LayerColors = new Dictionary<string, Color>
-        {
-            {"water", Color.FromArgb(Byte.MaxValue, 148, 193, 225)},
-            {"water_name", Colors.Black},
-            {"waterway", Color.FromArgb(Byte.MaxValue, 148, 193, 225)}
-        };
-
-        private static readonly Dictionary<string, Color> FeatureColors = new Dictionary<string, Color>
-        {
-            {"residential", Color.FromArgb(178, 224, 222, 215)},
-            {"trunk", Colors.SaddleBrown},
-            {"primary", Colors.SaddleBrown},
-            {"wood", Color.FromArgb(Byte.MaxValue, 192, 216, 151)},
-            {"grass", Colors.YellowGreen},
-            {"farmland", Colors.Goldenrod},
-            {"motorway", Colors.Brown},
-            {"state", Colors.Orange},
-            {"continent", Colors.DarkKhaki},
-            {"country", Colors.Black},
-            {"national_park", Colors.LightGreen},
-            {"nature_reserve", Colors.LightGreen},
-            {"park", Colors.LightGreen},
-            {"ice", Colors.GhostWhite},
-            {"city", Colors.Gray},
-            {"town", Colors.Gray},
-            {"village", Colors.Gray},
-            {"hamlet", Colors.Gray},
-            {"suburb", Colors.Gray}
-        };
-
+        private static readonly MemoryCache Cache = new MemoryCache(new MemoryCacheOptions());
 
         public static async Task RasterAsync(Tile tile, List<VectorTileLayer> layers, Style style)
         {
-            using (var canvasDevice = new CanvasDevice())
+            var imageKey = new {tile.X, tile.Y, tile.ZoomLevel};
+
+            if (!Cache.TryGetValue(imageKey, out BitmapImage image))
             {
-                const float size = 512;
-                using (var canvasRenderTarget = new CanvasRenderTarget(canvasDevice, size, size, 96))
+                using (var canvasDevice = new CanvasDevice())
                 {
-                    using (var session = canvasRenderTarget.CreateDrawingSession())
+                    const float size = 1024;
+                    using (var canvasRenderTarget = new CanvasRenderTarget(canvasDevice, size, size, 96))
                     {
-                        session.Antialiasing = CanvasAntialiasing.Antialiased;
-                        session.TextAntialiasing = CanvasTextAntialiasing.ClearType;
-                        session.FillRectangle(new Rect(0, 0, size, size), Colors.White);
-
-                        foreach (var layer in layers)
+                        using (var session = canvasRenderTarget.CreateDrawingSession())
                         {
-                            var scale = size / layer.Extent;
+                            session.Antialiasing = CanvasAntialiasing.Antialiased;
+                            session.TextAntialiasing = CanvasTextAntialiasing.ClearType;
+                            session.FillRectangle(new Rect(0, 0, size, size), Colors.White);
 
-                            foreach (var feature in layer.VectorTileFeatures)
+                            foreach (var layer in layers)
                             {
-                                var attributes =
-                                    feature.Attributes.ToDictionary(pair => pair.Key,
-                                        pair => pair.Value.ToString());
+                                RasterLayer(session, canvasRenderTarget, tile, layer, style, size);
+                            }
+                        }
 
-                                Color color;
+                        image = new BitmapImage();
 
-                                if (attributes.TryGetValue("class", out var featureClass))
+                        var stream = new InMemoryRandomAccessStream();
+
+                        await canvasRenderTarget.SaveAsync(stream, CanvasBitmapFileFormat.Png);
+                        image.SetSource(stream);
+
+                        Cache.Set(imageKey, image);
+                    }
+                }
+            }
+            
+            tile.SetImage(image);
+        }
+
+        private static void RasterLayer(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget, Tile tile,
+            VectorTileLayer layer, Style style, float size)
+        {
+            var styleLayers = style.GetLayers(layer.Name, tile.ZoomLevel);
+
+            var scale = size / layer.Extent;
+
+            foreach (var feature in layer.VectorTileFeatures)
+            {
+                RasterFeature(session, canvasRenderTarget, tile, feature, styleLayers, scale);
+            }
+        }
+
+        private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget, Tile tile,
+            VectorTileFeature feature, IEnumerable<Layer> styleLayers, float scale)
+        {
+            var attributes =
+                feature.Attributes.ToDictionary(pair => pair.Key,
+                    pair => pair.Value.ToString());
+
+            var filterType = Convert(feature.GeometryType).Value;
+            var activeLayers = styleLayers.Where(styleLayer => styleLayer.Filter == null ||
+                                                               styleLayer.Filter.Evaluate(filterType, feature.Id,
+                                                                   attributes)).ToList();
+
+            var activeLayer = activeLayers.FirstOrDefault();
+            var paint = activeLayer?.Paint;
+            var color = paint?.FillColor?.GetValue(tile.ZoomLevel);
+            var fillColor = Convert(color);
+            color = paint?.LineColor?.GetValue(tile.ZoomLevel);
+            var lineColor = Convert(color);
+            color = paint?.TextColor?.GetValue(tile.ZoomLevel);
+            var textColor = Convert(color);
+
+            attributes.TryGetValue("name", out var name);
+
+
+            switch (feature.GeometryType)
+            {
+                case VectorTile.Tile.Types.GeomType.Unknown:
+                    break;
+                case VectorTile.Tile.Types.GeomType.Point:
+                    foreach (var point in feature.Geometry)
+                    {
+                        var center = point.First().ToVector2(scale);
+
+                        if (name != null && textColor.HasValue)
+                        {
+                            session.DrawText(name, center, textColor.Value,
+                                new CanvasTextFormat
                                 {
-                                    if (!FeatureColors.TryGetValue(featureClass, out color))
+                                    HorizontalAlignment = CanvasHorizontalAlignment.Center,
+                                    FontSize = 9
+                                });
+                        }
+                    }
+
+                    break;
+
+                case VectorTile.Tile.Types.GeomType.Linestring:
+                case VectorTile.Tile.Types.GeomType.Polygon:
+                {
+                    foreach (var line in feature.Geometry)
+                    {
+                        using (var pathBuilder = new CanvasPathBuilder(canvasRenderTarget))
+                        {
+                            Coordinate first = line.First();
+                            Vector2 p1 = first.ToVector2(scale);
+                            pathBuilder.BeginFigure(p1);
+
+                            foreach (var coordinate in line.Skip(1))
+                            {
+                                pathBuilder.AddLine(coordinate.ToVector2(scale));
+                            }
+
+                            var loop = feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon
+                                ? CanvasFigureLoop.Closed
+                                : CanvasFigureLoop.Open;
+
+                            pathBuilder.EndFigure(loop);
+
+                            using (var geometry = CanvasGeometry.CreatePath(pathBuilder))
+                            {
+                                if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
+                                {
+                                    if (fillColor.HasValue)
                                     {
-                                        if (!LayerColors.TryGetValue(layer.Name, out color))
-                                        {
-                                            continue;
-                                        }
+                                        session.FillGeometry(geometry, fillColor.Value);
                                     }
                                 }
-                                else
+                                else if (lineColor.HasValue)
                                 {
-                                    continue;
-                                }
-
-                                attributes.TryGetValue("name", out var name);
-
-
-                                switch (feature.GeometryType)
-                                {
-                                    case VectorTile.Tile.Types.GeomType.Unknown:
-                                        break;
-                                    case VectorTile.Tile.Types.GeomType.Point:
-                                        foreach (var point in feature.Geometry)
-                                        {
-                                            var center = point.First().ToVector2(scale);
-
-                                            if (name != null)
-                                            {
-                                                session.DrawText(name, center, color,
-                                                    new CanvasTextFormat
-                                                    {
-                                                        HorizontalAlignment = CanvasHorizontalAlignment.Center,
-                                                        FontSize = 9
-                                                    });
-                                            }
-                                        }
-
-                                        break;
-
-                                    case VectorTile.Tile.Types.GeomType.Linestring:
-                                    case VectorTile.Tile.Types.GeomType.Polygon:
-                                        {
-                                            foreach (var line in feature.Geometry)
-                                            {
-                                                using (var pathBuilder = new CanvasPathBuilder(canvasRenderTarget))
-                                                {
-                                                    Coordinate first = line.First();
-                                                    Vector2 p1 = first.ToVector2(scale);
-                                                    pathBuilder.BeginFigure(p1);
-
-                                                    foreach (var coordinate in line.Skip(1))
-                                                    {
-                                                        pathBuilder.AddLine(coordinate.ToVector2(scale));
-                                                    }
-
-                                                    var loop = feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon
-                                                        ? CanvasFigureLoop.Closed
-                                                        : CanvasFigureLoop.Open;
-
-                                                    pathBuilder.EndFigure(loop);
-
-                                                    using (var geometry = CanvasGeometry.CreatePath(pathBuilder))
-                                                    {
-                                                        if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
-                                                        {
-                                                            session.FillGeometry(geometry, color);
-                                                        }
-                                                        else
-                                                        {
-                                                            session.DrawGeometry(geometry, color);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        break;
-                                    default:
-                                        throw new ArgumentOutOfRangeException();
+                                    session.DrawGeometry(geometry, lineColor.Value);
                                 }
                             }
                         }
                     }
-
-                    var image = new BitmapImage();
-
-                    var stream = new InMemoryRandomAccessStream();
-
-                    await canvasRenderTarget.SaveAsync(stream, CanvasBitmapFileFormat.Png);
-                    image.SetSource(stream);
-
-                    tile.SetImage(image);
                 }
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private static Color? Convert(System.Drawing.Color? color)
+        {
+            if (color == null)
+            {
+                return null;
+            }
+
+            return Color.FromArgb(color.Value.A, color.Value.R, color.Value.G, color.Value.B);
+        }
+
+        private static FilterType? Convert(VectorTile.Tile.Types.GeomType type)
+        {
+            switch (type)
+            {
+                case VectorTile.Tile.Types.GeomType.Point:
+                    return FilterType.Point;
+                case VectorTile.Tile.Types.GeomType.Linestring:
+                    return FilterType.LineString;
+                case VectorTile.Tile.Types.GeomType.Polygon:
+                    return FilterType.Polygon;
+            }
+
+            return null;
         }
     }
 }

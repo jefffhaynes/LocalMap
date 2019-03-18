@@ -2,6 +2,7 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Mapbox.Vector.Tile;
 using MapboxStyle;
@@ -25,6 +26,8 @@ namespace MapTest
 
         private async Task LoadTileAsync(Tile tile)
         {
+            LoadStyle(tile.ZoomLevel);
+
             using (var db = new DatabaseContext())
             {
                 var column = tile.X;
@@ -50,6 +53,8 @@ namespace MapTest
             }
         }
 
+        private readonly object _styleLock = new object();
+
         private void LoadStyle(double zoom)
         {
             if (_style != null)
@@ -57,9 +62,19 @@ namespace MapTest
                 return;
             }
 
-            using (var stream = new FileStream("style.json", FileMode.Open, FileAccess.Read))
+            lock (_styleLock)
             {
-                _style = StyleSerializer.Deserialize(stream);
+                if (_style != null)
+                {
+                    return;
+                }
+
+                var assembly = GetType().Assembly;
+                
+                using (var stream = assembly.GetManifestResourceStream("LocalMap.style.json"))
+                {
+                    _style = StyleSerializer.Deserialize(stream);
+                }
             }
         }
     }

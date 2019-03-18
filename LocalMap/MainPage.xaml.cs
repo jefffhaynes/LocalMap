@@ -13,7 +13,11 @@ namespace MapTest
             InitializeComponent();
             
             MapControl.Center = new Location(0, 0);
-            MapControl.MapLayer = new MapTileLayer(new DatabaseTileImageLoader());
+            MapControl.MapLayer = new MapTileLayer(new DatabaseTileImageLoader())
+            {
+                MinZoomLevel = 0,
+                MaxZoomLevel = 24
+            };
         }
     }
 }

@@ -49,7 +49,7 @@ namespace MapboxStyle
                     return GetCombiningFilter(filterOperator, array);
             }
 
-            return null;
+            throw new NotSupportedException();
         }
 
         private static CombiningFilter GetCombiningFilter(FilterOperator filterOperator, JArray array)
@@ -67,7 +67,7 @@ namespace MapboxStyle
                     return new NoneCombiningFilter(filters);
             }
 
-            return null;
+            throw new NotSupportedException();
         }
 
         private static ComparisonFilter GetComparisonFilter(FilterOperator filterOperator, JArray array)
@@ -77,25 +77,21 @@ namespace MapboxStyle
 
             switch (filterOperator)
             {
-                case FilterOperator.Exists:
-                    break;
-                case FilterOperator.DoesNotExist:
-                    break;
                 case FilterOperator.Equal:
                     return new EqualFilter(key, value);
                 case FilterOperator.NotEqual:
-                    break;
+                    return new NotEqualFilter(key, value);
                 case FilterOperator.GreaterThan:
-                    break;
+                    return new GreaterThanFilter(key, value);
                 case FilterOperator.GreaterThanOrEqual:
-                    break;
+                    return new GreaterThanOrEqualFilter(key, value);
                 case FilterOperator.LessThan:
-                    break;
+                    return new LessThanFilter(key, value);
                 case FilterOperator.LessThanOrEqual:
-                    break;
+                    return new LessThanOrEqualFilter(key, value);
             }
 
-            return null;
+            throw new NotSupportedException();
         }
 
         private static MembershipFilter GetMembershipFilter(FilterOperator filterOperator, JArray array)
@@ -113,7 +109,7 @@ namespace MapboxStyle
                 return new NotInMembershipFilter(key, values);
             }
 
-            return null;
+            throw new NotSupportedException();
         }
 
         private static ExistentialFilter GetExistentialFilter(FilterOperator filterOperator, JArray array)
@@ -130,7 +126,7 @@ namespace MapboxStyle
                 return new HasNotExistentialFilter(key);
             }
 
-            return null;
+            throw new NotSupportedException();
         }
     }
 }

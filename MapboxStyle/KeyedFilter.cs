@@ -16,18 +16,15 @@ namespace MapboxStyle
         {
             if (_key == "$type")
             {
-                OnEvaluate(featureType.ToString());
-            }
-            else if (_key == "$id")
-            {
-                OnEvaluate(featureId);
-            }
-            else if (featureProperties.TryGetValue(_key, out string value))
-            {
-                OnEvaluate(value);
+                return OnEvaluate(featureType.ToString());
             }
 
-            return false;
+            if (_key == "$id")
+            {
+                return OnEvaluate(featureId);
+            }
+
+            return featureProperties.TryGetValue(_key, out string value) && OnEvaluate(value);
         }
 
         protected abstract bool OnEvaluate(string value);

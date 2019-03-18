@@ -65,13 +65,13 @@ namespace MapControl
             nameof(TileFadeDuration), typeof(TimeSpan), typeof(MapBase),
             new PropertyMetadata(Tile.FadeDuration, (o, e) => Tile.FadeDuration = (TimeSpan) e.NewValue));
 
-        private PointAnimation centerAnimation;
-        private double centerLongitude;
-        private DoubleAnimation headingAnimation;
-        private bool internalPropertyChange;
-        private Location transformCenter;
-        private Point viewportCenter;
-        private DoubleAnimation zoomLevelAnimation;
+        private PointAnimation _centerAnimation;
+        private double _centerLongitude;
+        private DoubleAnimation _headingAnimation;
+        private bool _internalPropertyChange;
+        private Location _transformCenter;
+        private Point _viewportCenter;
+        private DoubleAnimation _zoomLevelAnimation;
 
         /// <summary>
         ///     Gets or sets the map foreground Brush.
@@ -265,8 +265,8 @@ namespace MapControl
         /// </summary>
         public void SetTransformCenter(Point center)
         {
-            transformCenter = MapProjection.ViewportPointToLocation(center);
-            viewportCenter = center;
+            _transformCenter = MapProjection.ViewportPointToLocation(center);
+            _viewportCenter = center;
         }
 
         /// <summary>
@@ -274,8 +274,8 @@ namespace MapControl
         /// </summary>
         public void ResetTransformCenter()
         {
-            transformCenter = null;
-            viewportCenter = new Point(RenderSize.Width / 2d, RenderSize.Height / 2d);
+            _transformCenter = null;
+            _viewportCenter = new Point(RenderSize.Width / 2d, RenderSize.Height / 2d);
         }
 
         /// <summary>
@@ -283,7 +283,7 @@ namespace MapControl
         /// </summary>
         public void TranslateMap(Vector translation)
         {
-            if (transformCenter != null)
+            if (_transformCenter != null)
             {
                 ResetTransformCenter();
                 UpdateTransform();
@@ -291,7 +291,7 @@ namespace MapControl
 
             if (Math.Abs(translation.X) > double.Epsilon || Math.Abs(translation.Y) > double.Epsilon)
             {
-                Center = MapProjection.ViewportPointToLocation(viewportCenter - translation);
+                Center = MapProjection.ViewportPointToLocation(_viewportCenter - translation);
             }
         }
 
@@ -304,8 +304,8 @@ namespace MapControl
         {
             if (Math.Abs(rotation) > double.Epsilon || Math.Abs(scale - 1d) > double.Epsilon)
             {
-                transformCenter = MapProjection.ViewportPointToLocation(center);
-                viewportCenter = center + translation;
+                _transformCenter = MapProjection.ViewportPointToLocation(center);
+                _viewportCenter = center + translation;
 
                 if (Math.Abs(rotation) > double.Epsilon)
                 {
@@ -416,18 +416,18 @@ namespace MapControl
 
         private void CenterPropertyChanged(Location center)
         {
-            if (!internalPropertyChange)
+            if (!_internalPropertyChange)
             {
                 AdjustCenterProperty(CenterProperty, ref center);
                 UpdateTransform();
 
-                if (centerAnimation == null) SetValueInternal(TargetCenterProperty, center);
+                if (_centerAnimation == null) SetValueInternal(TargetCenterProperty, center);
             }
         }
 
         private void TargetCenterPropertyChanged(Location targetCenter)
         {
-            if (!internalPropertyChange)
+            if (!_internalPropertyChange)
             {
                 AdjustCenterProperty(TargetCenterProperty, ref targetCenter);
 
@@ -437,9 +437,9 @@ namespace MapControl
                         ? Location.NearestLongitude(targetCenter.Longitude, Center.Longitude)
                         : targetCenter.Longitude;
 
-                    if (centerAnimation != null) centerAnimation.Completed -= CenterAnimationCompleted;
+                    if (_centerAnimation != null) _centerAnimation.Completed -= CenterAnimationCompleted;
 
-                    centerAnimation = new PointAnimation
+                    _centerAnimation = new PointAnimation
                     {
                         From = new Point(Center.Longitude, Center.Latitude),
                         To = new Point(targetCenterLongitude, targetCenter.Latitude),
@@ -447,19 +447,19 @@ namespace MapControl
                         EasingFunction = AnimationEasingFunction
                     };
 
-                    centerAnimation.Completed += CenterAnimationCompleted;
+                    _centerAnimation.Completed += CenterAnimationCompleted;
 
-                    this.BeginAnimation(CenterPointProperty, centerAnimation);
+                    this.BeginAnimation(CenterPointProperty, _centerAnimation);
                 }
             }
         }
 
         private void CenterAnimationCompleted(object sender, object e)
         {
-            if (centerAnimation != null)
+            if (_centerAnimation != null)
             {
-                centerAnimation.Completed -= CenterAnimationCompleted;
-                centerAnimation = null;
+                _centerAnimation.Completed -= CenterAnimationCompleted;
+                _centerAnimation = null;
 
                 this.BeginAnimation(CenterPointProperty, null);
             }
@@ -467,7 +467,7 @@ namespace MapControl
 
         private void CenterPointPropertyChanged(Location center)
         {
-            if (centerAnimation != null)
+            if (_centerAnimation != null)
             {
                 SetValueInternal(CenterProperty, center);
                 UpdateTransform();
@@ -507,48 +507,48 @@ namespace MapControl
 
         private void ZoomLevelPropertyChanged(double zoomLevel)
         {
-            if (!internalPropertyChange)
+            if (!_internalPropertyChange)
             {
                 AdjustZoomLevelProperty(ZoomLevelProperty, ref zoomLevel);
                 UpdateTransform();
 
-                if (zoomLevelAnimation == null) SetValueInternal(TargetZoomLevelProperty, zoomLevel);
+                if (_zoomLevelAnimation == null) SetValueInternal(TargetZoomLevelProperty, zoomLevel);
             }
         }
 
         private void TargetZoomLevelPropertyChanged(double targetZoomLevel)
         {
-            if (!internalPropertyChange)
+            if (!_internalPropertyChange)
             {
                 AdjustZoomLevelProperty(TargetZoomLevelProperty, ref targetZoomLevel);
 
                 if (Math.Abs(targetZoomLevel - ZoomLevel) > Double.Epsilon)
                 {
-                    if (zoomLevelAnimation != null) zoomLevelAnimation.Completed -= ZoomLevelAnimationCompleted;
+                    if (_zoomLevelAnimation != null) _zoomLevelAnimation.Completed -= ZoomLevelAnimationCompleted;
 
-                    zoomLevelAnimation = new DoubleAnimation
+                    _zoomLevelAnimation = new DoubleAnimation
                     {
                         To = targetZoomLevel,
                         Duration = AnimationDuration,
                         EasingFunction = AnimationEasingFunction
                     };
 
-                    zoomLevelAnimation.Completed += ZoomLevelAnimationCompleted;
+                    _zoomLevelAnimation.Completed += ZoomLevelAnimationCompleted;
 
-                    this.BeginAnimation(ZoomLevelProperty, zoomLevelAnimation);
+                    this.BeginAnimation(ZoomLevelProperty, _zoomLevelAnimation);
                 }
             }
         }
 
         private void ZoomLevelAnimationCompleted(object sender, object e)
         {
-            if (zoomLevelAnimation != null)
+            if (_zoomLevelAnimation != null)
             {
                 SetValueInternal(ZoomLevelProperty, TargetZoomLevel);
                 UpdateTransform(true);
 
-                zoomLevelAnimation.Completed -= ZoomLevelAnimationCompleted;
-                zoomLevelAnimation = null;
+                _zoomLevelAnimation.Completed -= ZoomLevelAnimationCompleted;
+                _zoomLevelAnimation = null;
 
                 this.BeginAnimation(ZoomLevelProperty, null);
             }
@@ -565,18 +565,18 @@ namespace MapControl
 
         private void HeadingPropertyChanged(double heading)
         {
-            if (!internalPropertyChange)
+            if (!_internalPropertyChange)
             {
                 AdjustHeadingProperty(HeadingProperty, ref heading);
                 UpdateTransform();
 
-                if (headingAnimation == null) SetValueInternal(TargetHeadingProperty, heading);
+                if (_headingAnimation == null) SetValueInternal(TargetHeadingProperty, heading);
             }
         }
 
         private void TargetHeadingPropertyChanged(double targetHeading)
         {
-            if (!internalPropertyChange)
+            if (!_internalPropertyChange)
             {
                 AdjustHeadingProperty(TargetHeadingProperty, ref targetHeading);
 
@@ -588,31 +588,31 @@ namespace MapControl
                         delta -= 360d;
                     else if (delta < -180d) delta += 360d;
 
-                    if (headingAnimation != null) headingAnimation.Completed -= HeadingAnimationCompleted;
+                    if (_headingAnimation != null) _headingAnimation.Completed -= HeadingAnimationCompleted;
 
-                    headingAnimation = new DoubleAnimation
+                    _headingAnimation = new DoubleAnimation
                     {
                         By = delta,
                         Duration = AnimationDuration,
                         EasingFunction = AnimationEasingFunction
                     };
 
-                    headingAnimation.Completed += HeadingAnimationCompleted;
+                    _headingAnimation.Completed += HeadingAnimationCompleted;
 
-                    this.BeginAnimation(HeadingProperty, headingAnimation);
+                    this.BeginAnimation(HeadingProperty, _headingAnimation);
                 }
             }
         }
 
         private void HeadingAnimationCompleted(object sender, object e)
         {
-            if (headingAnimation != null)
+            if (_headingAnimation != null)
             {
                 SetValueInternal(HeadingProperty, TargetHeading);
                 UpdateTransform();
 
-                headingAnimation.Completed -= HeadingAnimationCompleted;
-                headingAnimation = null;
+                _headingAnimation.Completed -= HeadingAnimationCompleted;
+                _headingAnimation = null;
 
                 this.BeginAnimation(HeadingProperty, null);
             }
@@ -620,19 +620,19 @@ namespace MapControl
 
         private void SetValueInternal(DependencyProperty property, object value)
         {
-            internalPropertyChange = true;
+            _internalPropertyChange = true;
             SetValue(property, value);
-            internalPropertyChange = false;
+            _internalPropertyChange = false;
         }
 
         private void UpdateTransform(bool resetTransformCenter = false, bool projectionChanged = false)
         {
             var projection = MapProjection;
-            var center = transformCenter ?? Center;
+            var center = _transformCenter ?? Center;
 
-            projection.SetViewportTransform(ProjectionCenter ?? Center, center, viewportCenter, ZoomLevel, Heading);
+            projection.SetViewportTransform(ProjectionCenter ?? Center, center, _viewportCenter, ZoomLevel, Heading);
 
-            if (transformCenter != null)
+            if (_transformCenter != null)
             {
                 center = projection.ViewportPointToLocation(new Point(RenderSize.Width / 2d, RenderSize.Height / 2d));
                 center.Longitude = Location.NormalizeLongitude(center.Longitude);
@@ -646,12 +646,12 @@ namespace MapControl
 
                 SetValueInternal(CenterProperty, center);
 
-                if (centerAnimation == null) SetValueInternal(TargetCenterProperty, center);
+                if (_centerAnimation == null) SetValueInternal(TargetCenterProperty, center);
 
                 if (resetTransformCenter)
                 {
                     ResetTransformCenter();
-                    projection.SetViewportTransform(ProjectionCenter ?? center, center, viewportCenter, ZoomLevel,
+                    projection.SetViewportTransform(ProjectionCenter ?? center, center, _viewportCenter, ZoomLevel,
                         Heading);
                 }
             }
@@ -664,9 +664,9 @@ namespace MapControl
 
             RotateTransform.Angle = Heading;
 
-            OnViewportChanged(new ViewportChangedEventArgs(projectionChanged, Center.Longitude - centerLongitude));
+            OnViewportChanged(new ViewportChangedEventArgs(projectionChanged, Center.Longitude - _centerLongitude));
 
-            centerLongitude = Center.Longitude;
+            _centerLongitude = Center.Longitude;
         }
 
         protected override void OnViewportChanged(ViewportChangedEventArgs e)

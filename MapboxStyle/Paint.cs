@@ -73,5 +73,8 @@ namespace MapboxStyle
 
         [JsonProperty("line-pattern")]
         public string LinePattern { get; set; }
+
+        [JsonProperty("text-color")]
+        public ColorFunction TextColor { get; set; }
     }
 }
