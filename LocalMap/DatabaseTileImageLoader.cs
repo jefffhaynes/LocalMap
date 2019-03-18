@@ -17,11 +17,17 @@ namespace MapTest
     {
         private Style _style;
 
-        public Task LoadTilesAsync(MapTileLayer tileLayer)
+        public async Task LoadTilesAsync(MapTileLayer tileLayer)
         {
             var pendingTiles = tileLayer.Tiles.Where(tile => tile.Pending);
-            var tileLoadTasks = pendingTiles.Select(async tile => await LoadTileAsync(tile));
-            return Task.WhenAll(tileLoadTasks);
+
+            foreach (var pendingTile in pendingTiles)
+            {
+                await LoadTileAsync(pendingTile);
+            }
+
+            //var tileLoadTasks = pendingTiles.Select(async tile => await LoadTileAsync(tile));
+            //return Task.WhenAll(tileLoadTasks);
         }
 
         private async Task LoadTileAsync(Tile tile)

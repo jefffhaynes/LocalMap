@@ -72,7 +72,8 @@ namespace MapTest
             }
         }
 
-        private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget, Tile tile,
+        private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
+            Tile tile,
             VectorTileFeature feature, IEnumerable<Layer> styleLayers, float scale)
         {
             var attributes =
@@ -121,38 +122,38 @@ namespace MapTest
                 case VectorTile.Tile.Types.GeomType.Linestring:
                 case VectorTile.Tile.Types.GeomType.Polygon:
                 {
-                    foreach (var line in feature.Geometry)
-                    {
-                        using (var pathBuilder = new CanvasPathBuilder(canvasRenderTarget))
-                        {
-                            Coordinate first = line.First();
-                            Vector2 p1 = first.ToVector2(scale);
-                            pathBuilder.BeginFigure(p1);
+                    var loop = feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon
+                        ? CanvasFigureLoop.Closed
+                        : CanvasFigureLoop.Open;
 
-                            foreach (var coordinate in line.Skip(1))
+                    using (var pathBuilder = new CanvasPathBuilder(canvasRenderTarget))
+                    {
+                        foreach (var line in feature.Geometry)
+                        {
+                            var vectors = line.Select(p => p.ToVector2(scale)).ToList();
+                                
+                            pathBuilder.BeginFigure(vectors[0]);
+
+                            for (int i = 1; i < vectors.Count; i++)
                             {
-                                pathBuilder.AddLine(coordinate.ToVector2(scale));
+                                pathBuilder.AddLine(vectors[i]);
                             }
 
-                            var loop = feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon
-                                ? CanvasFigureLoop.Closed
-                                : CanvasFigureLoop.Open;
-
                             pathBuilder.EndFigure(loop);
+                        }
 
-                            using (var geometry = CanvasGeometry.CreatePath(pathBuilder))
+                        using (var geometry = CanvasGeometry.CreatePath(pathBuilder))
+                        {
+                            if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
                             {
-                                if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
+                                if (fillColor.HasValue)
                                 {
-                                    if (fillColor.HasValue)
-                                    {
-                                        session.FillGeometry(geometry, fillColor.Value);
-                                    }
+                                    session.FillGeometry(geometry, fillColor.Value);
                                 }
-                                else if (lineColor.HasValue)
-                                {
-                                    session.DrawGeometry(geometry, lineColor.Value);
-                                }
+                            }
+                            else if (lineColor.HasValue)
+                            {
+                                session.DrawGeometry(geometry, lineColor.Value);
                             }
                         }
                     }
