@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Storage.Streams;
@@ -55,7 +54,7 @@ namespace MapTest
                     }
                 }
             }
-            
+
             tile.SetImage(image);
         }
 
@@ -83,7 +82,7 @@ namespace MapTest
             var filterType = Convert(feature.GeometryType).Value;
             var activeLayers = styleLayers.Where(styleLayer => styleLayer.Filter == null ||
                                                                styleLayer.Filter.Evaluate(filterType, feature.Id,
-                                                               attributes)).ToList();
+                                                                   attributes)).ToList();
 
             var zoom = tile.ZoomLevel;
 
@@ -152,7 +151,7 @@ namespace MapTest
 
                             pathBuilder.BeginFigure(vectors[0]);
 
-                            for (int i = 1; i < vectors.Count; i++)
+                            for (var i = 1; i < vectors.Count; i++)
                             {
                                 pathBuilder.AddLine(vectors[i]);
                             }
@@ -182,7 +181,7 @@ namespace MapTest
 
                                 session.DrawGeometry(geometry, lineColor, lineWidth);
 
-                                
+
                                 // "ref" is used for motorways
                                 //attributes.TryGetValue("ref", out var refName);
 
@@ -203,6 +202,8 @@ namespace MapTest
 
                                     var line = feature.Geometry[0];
                                     var vectors = line.Select(p => p.ToVector2(scale)).ToList();
+
+                                    // TODO http://csharphelper.com/blog/2016/01/draw-text-on-a-line-segment-in-c/
 
 
                                     //    var v = first - last;
