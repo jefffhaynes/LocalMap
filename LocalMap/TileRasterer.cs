@@ -146,17 +146,11 @@ namespace MapTest
 
                     using (var pathBuilder = new CanvasPathBuilder(canvasRenderTarget))
                     {
-                        Vector2 first = Vector2.Zero;
-                        Vector2 last = Vector2.Zero;
-
                         foreach (var line in feature.Geometry)
                         {
                             var vectors = line.Select(p => p.ToVector2(scale)).ToList();
 
-                            first = vectors[0];
-                            last = vectors[1];
-
-                            pathBuilder.BeginFigure(first);
+                            pathBuilder.BeginFigure(vectors[0]);
 
                             for (int i = 1; i < vectors.Count; i++)
                             {
@@ -194,15 +188,32 @@ namespace MapTest
 
                                 if (name != null)
                                 {
-                                    var v = first - last;
-                                    var angle = Math.Atan2(v.Y, v.X);
+                                    var pathLength = geometry.ComputePathLength();
+                                    var textFormat = new CanvasTextFormat();
+                                    var textLayout = new CanvasTextLayout(session, name, textFormat, 0, 0);
+                                    var textWidth = textLayout.DrawBounds.Width;
 
-                                    session.Transform = Matrix3x2.CreateRotation((float) angle);
+                                    var offset = (float) (pathLength - textWidth) / 2;
 
-                                    var center = (first + last) / 2;
-                                    session.DrawText(name, center, textColor);
+                                    if (textWidth > pathLength)
+                                    {
+                                        // for now just run away scared
+                                        return;
+                                    }
 
-                                    session.Transform = Matrix3x2.Identity;
+                                    var line = feature.Geometry[0];
+                                    var vectors = line.Select(p => p.ToVector2(scale)).ToList();
+
+
+                                    //    var v = first - last;
+                                    //var angle = 180 * Math.Atan2(v.Y, v.X) / Math.PI;
+
+                                    //session.Transform = Matrix3x2.CreateRotation((float) angle);
+
+                                    //var center = (first + last) / 2;
+                                    //session.DrawText(name, center, textColor);
+
+                                    //session.Transform = Matrix3x2.Identity;
                                 }
                             }
                         }
