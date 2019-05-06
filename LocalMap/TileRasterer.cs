@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Storage.Streams;
@@ -82,7 +83,7 @@ namespace MapTest
             var filterType = Convert(feature.GeometryType).Value;
             var activeLayers = styleLayers.Where(styleLayer => styleLayer.Filter == null ||
                                                                styleLayer.Filter.Evaluate(filterType, feature.Id,
-                                                                   attributes)).ToList();
+                                                               attributes)).ToList();
 
             var zoom = tile.ZoomLevel;
 
@@ -145,11 +146,17 @@ namespace MapTest
 
                     using (var pathBuilder = new CanvasPathBuilder(canvasRenderTarget))
                     {
+                        Vector2 first = Vector2.Zero;
+                        Vector2 last = Vector2.Zero;
+
                         foreach (var line in feature.Geometry)
                         {
                             var vectors = line.Select(p => p.ToVector2(scale)).ToList();
-                                
-                            pathBuilder.BeginFigure(vectors[0]);
+
+                            first = vectors[0];
+                            last = vectors[1];
+
+                            pathBuilder.BeginFigure(first);
 
                             for (int i = 1; i < vectors.Count; i++)
                             {
@@ -163,7 +170,7 @@ namespace MapTest
                         {
                             if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
                             {
-                                    session.FillGeometry(geometry, fillColor);
+                                session.FillGeometry(geometry, fillColor);
                             }
                             else
                             {
@@ -180,6 +187,23 @@ namespace MapTest
                                 }
 
                                 session.DrawGeometry(geometry, lineColor, lineWidth);
+
+                                
+                                // "ref" is used for motorways
+                                //attributes.TryGetValue("ref", out var refName);
+
+                                if (name != null)
+                                {
+                                    var v = first - last;
+                                    var angle = Math.Atan2(v.Y, v.X);
+
+                                    session.Transform = Matrix3x2.CreateRotation((float) angle);
+
+                                    var center = (first + last) / 2;
+                                    session.DrawText(name, center, textColor);
+
+                                    session.Transform = Matrix3x2.Identity;
+                                }
                             }
                         }
                     }
