@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Storage.Streams;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.Text;
+using Point = Windows.Foundation.Point;
 
 namespace MapTest
 {
@@ -187,34 +189,40 @@ namespace MapTest
 
                                 if (name != null)
                                 {
-                                    var pathLength = geometry.ComputePathLength();
-                                    var textFormat = new CanvasTextFormat();
-                                    var textLayout = new CanvasTextLayout(session, name, textFormat, 0, 0);
-                                    var textWidth = textLayout.DrawBounds.Width;
+                                    //var pathLength = geometry.ComputePathLength();
+                                    //var textFormat = new CanvasTextFormat();
+                                    //var textLayout = new CanvasTextLayout(session, name, textFormat, 0, 0);
+                                    //var textWidth = textLayout.DrawBounds.Width;
 
-                                    var offset = (float) (pathLength - textWidth) / 2;
+                                    //var offset = (float) (pathLength - textWidth) / 2;
 
-                                    if (textWidth > pathLength)
+                                    //if (textWidth > pathLength)
+                                    //{
+                                    //    // for now just run away scared
+                                    //    return;
+                                    //}
+
+                                    var format = new CanvasTextFormat
                                     {
-                                        // for now just run away scared
-                                        return;
-                                    }
+                                        FontSize = fontSize,
+                                        FontFamily = fontFamily
+                                    };
 
                                     var line = feature.Geometry[0];
                                     var vectors = line.Select(p => p.ToVector2(scale)).ToList();
 
-                                    // TODO http://csharphelper.com/blog/2016/01/draw-text-on-a-line-segment-in-c/
+                                    var start = vectors[0];
 
+                                    int charIndex = 0;
+                                    foreach (var v in vectors.Skip(1))
+                                    {
+                                        DrawTextOnSegment(session, name, textColor, format, ref charIndex, ref start, v, false);
 
-                                    //    var v = first - last;
-                                    //var angle = 180 * Math.Atan2(v.Y, v.X) / Math.PI;
-
-                                    //session.Transform = Matrix3x2.CreateRotation((float) angle);
-
-                                    //var center = (first + last) / 2;
-                                    //session.DrawText(name, center, textColor);
-
-                                    //session.Transform = Matrix3x2.Identity;
+                                        if (charIndex >= name.Length)
+                                        {
+                                            break;
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -224,6 +232,81 @@ namespace MapTest
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private static void DrawTextOnSegment(CanvasDrawingSession gr, string txt, Color color, CanvasTextFormat format, ref int first_ch,
+            ref Vector2 start_point, Vector2 end_point,
+            bool text_above_segment)
+        {
+            float dx = end_point.X - start_point.X;
+            float dy = end_point.Y - start_point.Y;
+            float dist = (float)Math.Sqrt(dx * dx + dy * dy);
+            dx /= dist;
+            dy /= dist;
+
+            // See how many characters will fit.
+            int last_ch;
+            for (last_ch = txt.Length; last_ch > 0; last_ch--)
+            {
+                string test_string =
+                    txt.Substring(first_ch, last_ch - first_ch);
+
+                var textLayout = new CanvasTextLayout(gr, test_string, format, 0, 0);
+
+                if (textLayout.DrawBounds.Width < dist)
+                {
+                    break;
+                }
+            }
+
+            if (last_ch < first_ch) return;
+            if (last_ch >= txt.Length) last_ch = txt.Length - 1;
+
+            string chars_that_fit =
+                txt.Substring(first_ch, last_ch - first_ch + 1);
+
+            var transform = gr.Transform;
+
+            var fitTextLayout = new CanvasTextLayout(gr, chars_that_fit, format, 0, 0);
+
+            // Rotate and translate to position the characters.
+            //GraphicsState state = gr.Save();
+            if (text_above_segment)
+            {
+                gr.Transform = Matrix3x2.CreateTranslation(0, (float) fitTextLayout.DrawBounds.Height);
+                //gr.TranslateTransform(0,
+                //    -gr.MeasureString(chars_that_fit, font).Height,
+                //    MatrixOrder.Append);
+            }
+
+            float angle = (float) Math.Atan2(dy, dx);
+
+            var rotation = Matrix3x2.CreateRotation(angle);
+            gr.Transform = Matrix3x2.Multiply(gr.Transform, rotation);
+
+            //var translate = Matrix3x2.CreateTranslation(start_point.X, start_point.Y);
+            //gr.Transform = Matrix3x2.Multiply(gr.Transform, translate);
+
+            //gr.RotateTransform(angle, MatrixOrder.Append);
+            //gr.TranslateTransform(start_point.X, start_point.Y,
+            //    MatrixOrder.Append);
+
+            // Draw the characters that fit.
+            //gr.DrawString(chars_that_fit, font, brush, 0, 0);
+            gr.DrawText(chars_that_fit, start_point, color, format);
+
+            // Restore the saved state.
+            //gr.Restore(state);
+            gr.Transform = transform;
+
+            // Update first_ch and start_point.
+            first_ch = last_ch + 1;
+
+            var text_width = (float) fitTextLayout.DrawBounds.Width;
+
+            start_point = new Vector2(
+                start_point.X + dx * text_width,
+                start_point.Y + dy * text_width);
         }
 
         private static Color? Convert(System.Drawing.Color? color)
