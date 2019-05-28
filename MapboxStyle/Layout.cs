@@ -23,6 +23,9 @@ namespace MapboxStyle
         [JsonProperty("text-transform")]
         public TextTransform? TextTransform { get; set; }
 
+        [JsonProperty("max-text-width")]
+        public DoubleFunction MaximumTextWidth { get; set; }
+
         [JsonProperty("line-cap")]
         public LineCap? LineCap { get; set; }
 

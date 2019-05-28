@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Windows.Foundation;
 using Windows.UI;
 using Mapbox.Vector.Tile;
 using Microsoft.Graphics.Canvas;
@@ -59,14 +60,16 @@ namespace LocalMap
             {
                 string testValue =
                     value.Substring(characterIndex, lastCharacterIndex - characterIndex + 1);
-                var textLayout = new CanvasTextLayout(session, testValue, format, 0, 0);
-
-                if (textLayout.DrawBounds.Width > distance)
+                using (var textLayout = new CanvasTextLayout(session, testValue, format, 0, 0))
                 {
-                    // This is one too many characters.
-                    lastCharacterIndex--;
-                    break;
+                    if (textLayout.DrawBounds.Width > distance)
+                    {
+                        // This is one too many characters.
+                        lastCharacterIndex--;
+                        break;
+                    }
                 }
+
                 lastCharacterIndex++;
             }
 
@@ -86,28 +89,34 @@ namespace LocalMap
 
             var transform = session.Transform;
 
-            var fitTextLayout = new CanvasTextLayout(session, substring, format, 0, 0);
-
-            float angle = (float)Math.Atan2(dy, dx);
-
-            if (Math.Abs(angle) > maxRotation)
+            float width;
+            using (var layout = new CanvasTextLayout(session, substring, format, 0, 0))
             {
-                return false;
+                float angle = (float)Math.Atan2(dy, dx);
+
+                if (Math.Abs(angle) > maxRotation)
+                {
+                    return false;
+                }
+
+                var rotation = Matrix3x2.CreateRotation(angle, start);
+                session.Transform = Matrix3x2.Multiply(session.Transform, rotation);
+
+                // Draw the characters that fit.
+                session.DrawTextLayout(layout, start, color);
+
+                var collisionBox = new Rect(start.X, start.Y, layout.DrawBounds.Width,
+                    layout.DrawBounds.Height);
+                session.DrawRectangle(collisionBox, Colors.Purple);
+
+                // Restore the saved state.
+                session.Transform = transform;
+
+                // Update characterIndex and start.
+                characterIndex = lastCharacterIndex + 1;
+
+                width = (float) layout.DrawBounds.Width;
             }
-
-            var rotation = Matrix3x2.CreateRotation(angle, start);
-            session.Transform = Matrix3x2.Multiply(session.Transform, rotation);
-
-            // Draw the characters that fit.
-            session.DrawText(substring, start, color, format);
-
-            // Restore the saved state.
-            session.Transform = transform;
-
-            // Update characterIndex and start.
-            characterIndex = lastCharacterIndex + 1;
-
-            var width = (float)fitTextLayout.DrawBounds.Width;
 
             start = new Vector2(start.X + dx * width, start.Y + dy * width);
 

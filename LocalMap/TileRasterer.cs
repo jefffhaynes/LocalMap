@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Storage.Streams;
@@ -137,7 +138,6 @@ namespace LocalMap
             fontSize *= TileSize / 256;
 
             var fontFamily = layout?.TextFont?.FirstOrDefault();
-            var textAnchor = layout?.TextAnchor ?? TextAnchor.Center;
             var textPadding = layout?.TextPadding?.GetValue(zoom) ?? 2.0;
 
             if (attributes.TryGetValue("name", out var name))
@@ -158,9 +158,17 @@ namespace LocalMap
             switch (feature.GeometryType)
             {
                 case VectorTile.Tile.Types.GeomType.Point:
-                    DrawLabel(session, name, feature.Geometry, scale, fontSize, fontFamily, textColor, textAnchor,
+                {
+                    var point = feature.Geometry[0][0];
+                    var anchor = point.ToVector2(scale);
+
+                    var textAnchor = layout?.TextAnchor ?? TextAnchor.Center;
+                    var maximumTextWidth = (float?) layout?.MaximumTextWidth?.GetValue(zoom) ?? 10.0f;
+
+                    DrawLabel(session, name, anchor, fontSize, fontFamily, textColor, textAnchor, maximumTextWidth,
                         textPadding, textHaloColor, textHaloWidth, collisionBoxes);
                     break;
+                }
 
                 case VectorTile.Tile.Types.GeomType.Linestring:
                 case VectorTile.Tile.Types.GeomType.Polygon:
@@ -194,29 +202,30 @@ namespace LocalMap
 
                                 if (fillOutlineColor != null)
                                 {
-                                    session.DrawGeometry(geometry, Vector2.Zero, fillOutlineColor.Value);
+                                    session.DrawGeometry(geometry, fillOutlineColor.Value, 1.0f);
                                 }
                             }
                             else
                             {
-                                var strokeStyle = new CanvasStrokeStyle();
-
-                                if (layout?.LineDashArray != null)
+                                using (var strokeStyle = new CanvasStrokeStyle())
                                 {
-                                    strokeStyle.CustomDashStyle = layout.LineDashArray.ToArray();
-                                }
+                                    if (layout?.LineDashArray != null)
+                                    {
+                                        strokeStyle.CustomDashStyle = layout.LineDashArray.ToArray();
+                                    }
 
-                                if (layout?.LineCap != null)
-                                {
-                                    strokeStyle.StartCap = strokeStyle.EndCap = Convert(layout.LineCap.Value);
-                                }
+                                    if (layout?.LineCap != null)
+                                    {
+                                        strokeStyle.StartCap = strokeStyle.EndCap = Convert(layout.LineCap.Value);
+                                    }
 
-                                if (layout?.LineJoin != null)
-                                {
-                                    strokeStyle.LineJoin = Convert(layout.LineJoin.Value);
-                                }
+                                    if (layout?.LineJoin != null)
+                                    {
+                                        strokeStyle.LineJoin = Convert(layout.LineJoin.Value);
+                                    }
 
-                                session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
+                                    session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
+                                }
 
 
                                 // "ref" is used for motorways
@@ -224,19 +233,15 @@ namespace LocalMap
 
                                 if (name != null && !names.Contains(name))
                                 {
-                                    var format = new CanvasTextFormat
+                                    using (var format = new CanvasTextFormat {FontSize = fontSize, FontFamily = fontFamily, WordWrapping = CanvasWordWrapping.NoWrap})
                                     {
-                                        FontSize = fontSize,
-                                        FontFamily = fontFamily,
-                                        WordWrapping = CanvasWordWrapping.NoWrap
-                                    };
+                                        var line = feature.Geometry[0];
+                                        var vectors = line.Select(p => p.ToVector2(scale)).ToList();
 
-                                    var line = feature.Geometry[0];
-                                    var vectors = line.Select(p => p.ToVector2(scale)).ToList();
-
-                                    if (session.DrawTextOnSegments(name, vectors, textColor, format))
-                                    {
-                                        names.Add(name);
+                                        if (session.DrawTextOnSegments(name, vectors, textColor, format))
+                                        {
+                                            names.Add(name);
+                                        }
                                     }
                                 }
                             }
@@ -244,34 +249,24 @@ namespace LocalMap
                     }
                 }
                     break;
-                case VectorTile.Tile.Types.GeomType.Unknown:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
             }
         }
 
-        private static void DrawLabel(CanvasDrawingSession session, string name, List<List<Coordinate>> geometry,
-            float scale, float fontSize,
-            string fontFamily, Color textColor, TextAnchor textAnchor, double textPadding, Color? textHaloColor,
-            float textHaloWidth,
-            List<Rect> collisionBoxes)
+        private static void DrawLabel(CanvasDrawingSession session, string name, Vector2 anchor, float fontSize,
+            string fontFamily, Color textColor, TextAnchor textAnchor, float maximumTextWidth, double textPadding,
+            Color? textHaloColor, float textHaloWidth, List<Rect> collisionBoxes)
         {
             if (name == null)
             {
                 return;
             }
 
-            foreach (var point in geometry)
+            using (var format = new CanvasTextFormat
             {
-                var anchor = point.First().ToVector2(scale);
-
-                var format = new CanvasTextFormat
-                {
-                    FontSize = fontSize,
-                    WordWrapping = CanvasWordWrapping.NoWrap
-                };
-
+                FontSize = fontSize,
+                WordWrapping = CanvasWordWrapping.NoWrap
+            })
+            {
                 if (fontFamily != null)
                 {
                     format.FontFamily = fontFamily;
@@ -279,58 +274,111 @@ namespace LocalMap
 
                 Convert(textAnchor, out var horizontalAlignment, out var verticalAlignment);
                 format.HorizontalAlignment = horizontalAlignment;
-                format.VerticalAlignment = verticalAlignment;
+                //format.VerticalAlignment = verticalAlignment;
 
-                var layout = new CanvasTextLayout(session, name, format, 0, 0);
-                var layoutBounds = layout.LayoutBounds;
+                var wrappingWidth = GetWrappingWidth(session, name, format, maximumTextWidth * fontSize);
+                format.WordWrapping = CanvasWordWrapping.WholeWord;
 
-                double collisionX;
-                if (format.HorizontalAlignment == CanvasHorizontalAlignment.Center)
+                using (var layout = new CanvasTextLayout(session, name, format, wrappingWidth, 0))
                 {
-                    collisionX = anchor.X - layoutBounds.Width / 2;
-                }
-                else if (format.HorizontalAlignment == CanvasHorizontalAlignment.Right)
-                {
-                    collisionX = anchor.X - layoutBounds.Width;
-                }
-                else
-                {
-                    collisionX = anchor.X;
-                }
+                    var layoutBounds = layout.LayoutBounds;
 
-                double collisionY;
-                if (format.VerticalAlignment == CanvasVerticalAlignment.Center)
-                {
-                    collisionY = anchor.Y - layoutBounds.Height / 2;
-                }
-                else if (format.VerticalAlignment == CanvasVerticalAlignment.Bottom)
-                {
-                    collisionY = anchor.Y - layoutBounds.Height;
-                }
-                else
-                {
-                    collisionY = anchor.Y;
-                }
-
-                var collisionBox = new Rect(new Point(collisionX, collisionY),
-                    new Size(layoutBounds.Width, layoutBounds.Height)).Expand(textPadding);
-
-                // TODO if something was drawn in one tile, draw it in others at the same zoom level
-                if (collisionBoxes.All(box =>
-                {
-                    box.Intersect(collisionBox);
-                    return box.IsEmpty;
-                }))
-                {
-                    if (textHaloColor != null)
+                    double collisionX;
+                    if (format.HorizontalAlignment == CanvasHorizontalAlignment.Center)
                     {
-                        var textGeometry = CanvasGeometry.CreateText(layout);
-                        session.DrawGeometry(textGeometry, anchor, textHaloColor.Value, textHaloWidth * 2);
+                        collisionX = anchor.X - layoutBounds.Width / 2;
+                    }
+                    else if (format.HorizontalAlignment == CanvasHorizontalAlignment.Right)
+                    {
+                        collisionX = anchor.X - layoutBounds.Width;
+                    }
+                    else
+                    {
+                        collisionX = anchor.X;
                     }
 
-                    session.DrawText(name, anchor, textColor, format);
-                    collisionBoxes.Add(collisionBox);
+                    double collisionY;
+                    if (format.VerticalAlignment == CanvasVerticalAlignment.Center)
+                    {
+                        collisionY = anchor.Y - layoutBounds.Height / 2;
+                    }
+                    else if (format.VerticalAlignment == CanvasVerticalAlignment.Bottom)
+                    {
+                        collisionY = anchor.Y - layoutBounds.Height;
+                    }
+                    else
+                    {
+                        collisionY = anchor.Y;
+                    }
+
+                    var collisionPoint = new Point(collisionX, collisionY);
+                    var collisionSize = new Size(layoutBounds.Width, layoutBounds.Height);
+                    var collisionBox = new Rect(collisionPoint, collisionSize).Expand(textPadding);
+
+                    // TODO if something was drawn in one tile, draw it in others at the same zoom level
+                    if (collisionBoxes.All(box =>
+                    {
+                        box.Intersect(collisionBox);
+                        return box.IsEmpty;
+                    }))
+                    {
+                        if (textHaloColor != null)
+                        {
+                            var textGeometry = CanvasGeometry.CreateText(layout);
+                            session.DrawGeometry(textGeometry, collisionPoint.ToVector2(), textHaloColor.Value, textHaloWidth * 2);
+                        }
+
+                        session.DrawTextLayout(layout, collisionPoint.ToVector2(), textColor);
+                        session.DrawRectangle(collisionBox, Colors.Purple);
+                        collisionBoxes.Add(collisionBox);
+                    }
                 }
+            }
+        }
+
+        private static float GetWrappingWidth(CanvasDrawingSession session, string name, CanvasTextFormat format, float maxWidth)
+        {
+            var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var wordLengths = words.Select(word => Measure(session, word, format)).ToList();
+
+            if (wordLengths.Count == 1)
+            {
+                return wordLengths.First();
+            }
+
+            var spaceLength = Measure(session, " ", format);
+
+            float maxRowWidth = 0;
+            float rowWidth = 0;
+            foreach (var wordLength in wordLengths)
+            {
+                if (rowWidth + wordLength > maxWidth)
+                {
+                    // no more words will fit on this row.  next row
+                    maxRowWidth = Math.Max(maxRowWidth, rowWidth);
+                    rowWidth = wordLength;
+                }
+                else if (rowWidth > 0)
+                {
+                    // more words fit and we already have at least one word, so add a space
+                    rowWidth += spaceLength + wordLength;
+                }
+                else
+                {
+                    // first word
+                    rowWidth = wordLength;
+                }
+            }
+
+            // add one b/c we need to make sure layout happens inside this
+            return Math.Max(maxRowWidth, rowWidth) + 1; 
+        }
+
+        private static float Measure(CanvasDrawingSession session, string value, CanvasTextFormat format)
+        {
+            using (var layout = new CanvasTextLayout(session, value, format, 0, 0))
+            {
+                return (float) layout.LayoutBoundsIncludingTrailingWhitespace.Width;
             }
         }
 

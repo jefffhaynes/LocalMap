@@ -44,26 +44,27 @@ namespace LocalMap
         {
             var deferral = args.Request.GetDeferral();
 
-            var stream = await DatabaseTileImageLoader.LoadTileAsync(new Tile(args.X, args.Y, args.ZoomLevel));
-
-            if (stream != null)
+            using (var stream = await DatabaseTileImageLoader.LoadTileAsync(new Tile(args.X, args.Y, args.ZoomLevel)))
             {
-                var decoder = await BitmapDecoder.CreateAsync(BitmapDecoder.PngDecoderId, stream);
-                var bitmap = await decoder.GetSoftwareBitmapAsync();
-                var convertedBitmap = SoftwareBitmap.Convert(bitmap, BitmapPixelFormat.Rgba8);
+                if (stream != null)
+                {
+                    var decoder = await BitmapDecoder.CreateAsync(BitmapDecoder.PngDecoderId, stream);
+                    var bitmap = await decoder.GetSoftwareBitmapAsync();
+                    var convertedBitmap = SoftwareBitmap.Convert(bitmap, BitmapPixelFormat.Rgba8);
 
-                var recodeStream = new InMemoryRandomAccessStream();
+                    var recodeStream = new InMemoryRandomAccessStream();
 
-                byte[] imageBytes = new byte[4 * decoder.PixelWidth * decoder.PixelHeight];
-                convertedBitmap.CopyToBuffer(imageBytes.AsBuffer());
-                var writer2 = new DataWriter(recodeStream);
-                writer2.WriteBytes(imageBytes);
-                await writer2.StoreAsync();
-                await writer2.FlushAsync();
+                    byte[] imageBytes = new byte[4 * decoder.PixelWidth * decoder.PixelHeight];
+                    convertedBitmap.CopyToBuffer(imageBytes.AsBuffer());
+                    var writer2 = new DataWriter(recodeStream);
+                    writer2.WriteBytes(imageBytes);
+                    await writer2.StoreAsync();
+                    await writer2.FlushAsync();
 
-                var streamReference = RandomAccessStreamReference.CreateFromStream(recodeStream);
+                    var streamReference = RandomAccessStreamReference.CreateFromStream(recodeStream);
 
-                args.Request.PixelData = streamReference;
+                    args.Request.PixelData = streamReference;
+                }
             }
 
             deferral.Complete();
