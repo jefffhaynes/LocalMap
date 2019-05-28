@@ -70,5 +70,14 @@ namespace MapboxStyle
 
         [JsonProperty("text-color")]
         public ColorFunction TextColor { get; set; }
+
+        [JsonProperty("text-halo-blur")]
+        public DoubleFunction TextHaloBlur { get; set; }
+
+        [JsonProperty("text-halo-color")]
+        public ColorFunction TextHaloColor { get; set; }
+
+        [JsonProperty("text-halo-width")]
+        public DoubleFunction TextHaloWidth { get; set; }
     }
 }

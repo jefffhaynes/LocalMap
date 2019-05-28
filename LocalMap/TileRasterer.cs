@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Storage.Streams;
@@ -127,6 +128,9 @@ namespace LocalMap
             var lineWidth = (float?) paint?.LineWidth?.GetValue(zoom) ?? 1.0f;
             var textColor = Convert(color) ?? Colors.Black;
 
+            color = paint?.TextHaloColor?.GetValue(zoom);
+            var textHaloColor = Convert(color);
+
             var layout = activeLayer?.Layout;
             var fontSize = (float?) layout?.TextSize?.GetValue(zoom) ?? 16.0f;
             fontSize *= TileSize / 256;
@@ -141,7 +145,7 @@ namespace LocalMap
             {
                 case VectorTile.Tile.Types.GeomType.Point:
                     DrawLabel(session, name, feature.Geometry, scale, fontSize, fontFamily, textColor, textAnchor,
-                        textPadding, collisionBoxes);
+                        textPadding, textHaloColor, collisionBoxes);
                     break;
 
                 case VectorTile.Tile.Types.GeomType.Linestring:
@@ -222,8 +226,10 @@ namespace LocalMap
             }
         }
 
-        private static void DrawLabel(CanvasDrawingSession session, string name, List<List<Coordinate>> geometry, float scale, float fontSize,
-            string fontFamily, Color textColor, TextAnchor textAnchor, double textPadding, List<Rect> collisionBoxes)
+        private static void DrawLabel(CanvasDrawingSession session, string name, List<List<Coordinate>> geometry,
+            float scale, float fontSize,
+            string fontFamily, Color textColor, TextAnchor textAnchor, double textPadding, Color? textHaloColor,
+            List<Rect> collisionBoxes)
         {
             if (name == null)
             {
@@ -287,8 +293,8 @@ namespace LocalMap
                         throw new ArgumentOutOfRangeException();
                 }
 
-                var layoutTest = new CanvasTextLayout(session, name, format, 0, 0);
-                var layoutBounds = layoutTest.LayoutBounds;
+                var layout = new CanvasTextLayout(session, name, format, 0, 0);
+                var layoutBounds = layout.LayoutBounds;
 
                 double collisionX;
                 if (format.HorizontalAlignment == CanvasHorizontalAlignment.Center)
@@ -328,6 +334,12 @@ namespace LocalMap
                     return box.IsEmpty;
                 }))
                 {
+                    if (textHaloColor != null)
+                    {
+                        var textGeometry = CanvasGeometry.CreateText(layout);
+                        session.DrawGeometry(textGeometry, Vector2.Zero, textHaloColor.Value, 2.0f);
+                    }
+
                     session.DrawText(name, anchor, textColor, format);
                     collisionBoxes.Add(collisionBox);
                 }
