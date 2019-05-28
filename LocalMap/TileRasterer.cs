@@ -130,6 +130,7 @@ namespace LocalMap
 
             color = paint?.TextHaloColor?.GetValue(zoom);
             var textHaloColor = Convert(color);
+            var textHaloWidth = (float?) paint?.TextHaloWidth?.GetValue(zoom) ?? 0.0f;
 
             var layout = activeLayer?.Layout;
             var fontSize = (float?) layout?.TextSize?.GetValue(zoom) ?? 16.0f;
@@ -139,13 +140,26 @@ namespace LocalMap
             var textAnchor = layout?.TextAnchor ?? TextAnchor.Center;
             var textPadding = layout?.TextPadding?.GetValue(zoom) ?? 2.0;
 
-            attributes.TryGetValue("name", out var name);
+            if (attributes.TryGetValue("name", out var name))
+            {
+                var textTransform = layout?.TextTransform ?? TextTransform.None;
+
+                switch (textTransform)
+                {
+                    case TextTransform.Lowercase:
+                        name = name.ToLowerInvariant();
+                        break;
+                    case TextTransform.Uppercase:
+                        name = name.ToUpperInvariant();
+                        break;
+                }
+            }
 
             switch (feature.GeometryType)
             {
                 case VectorTile.Tile.Types.GeomType.Point:
                     DrawLabel(session, name, feature.Geometry, scale, fontSize, fontFamily, textColor, textAnchor,
-                        textPadding, textHaloColor, collisionBoxes);
+                        textPadding, textHaloColor, textHaloWidth, collisionBoxes);
                     break;
 
                 case VectorTile.Tile.Types.GeomType.Linestring:
@@ -191,6 +205,11 @@ namespace LocalMap
                                     strokeStyle.StartCap = strokeStyle.EndCap = Convert(layout.LineCap.Value);
                                 }
 
+                                if (layout?.LineJoin != null)
+                                {
+                                    strokeStyle.LineJoin = Convert(layout.LineJoin.Value);
+                                }
+
                                 session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
 
 
@@ -229,6 +248,7 @@ namespace LocalMap
         private static void DrawLabel(CanvasDrawingSession session, string name, List<List<Coordinate>> geometry,
             float scale, float fontSize,
             string fontFamily, Color textColor, TextAnchor textAnchor, double textPadding, Color? textHaloColor,
+            float textHaloWidth,
             List<Rect> collisionBoxes)
         {
             if (name == null)
@@ -337,7 +357,7 @@ namespace LocalMap
                     if (textHaloColor != null)
                     {
                         var textGeometry = CanvasGeometry.CreateText(layout);
-                        session.DrawGeometry(textGeometry, Vector2.Zero, textHaloColor.Value, 2.0f);
+                        session.DrawGeometry(textGeometry, Vector2.Zero, textHaloColor.Value, textHaloWidth * 2);
                     }
 
                     session.DrawText(name, anchor, textColor, format);
@@ -383,6 +403,21 @@ namespace LocalMap
                     return CanvasCapStyle.Square;
                 default:
                     return CanvasCapStyle.Flat;
+            }
+        }
+
+        private static CanvasLineJoin Convert(LineJoin lineJoin)
+        {
+            switch (lineJoin)
+            {
+                case LineJoin.Bevel:
+                    return CanvasLineJoin.Bevel;
+                case LineJoin.Round:
+                    return CanvasLineJoin.Round;
+                case LineJoin.Miter:
+                    return CanvasLineJoin.Miter;
+                default:
+                    return default;
             }
         }
     }

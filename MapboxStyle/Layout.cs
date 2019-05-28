@@ -20,6 +20,9 @@ namespace MapboxStyle
         [JsonProperty("text-padding")]
         public DoubleFunction TextPadding { get; set; }
 
+        [JsonProperty("text-transform")]
+        public TextTransform? TextTransform { get; set; }
+
         [JsonProperty("line-cap")]
         public LineCap? LineCap { get; set; }
 
