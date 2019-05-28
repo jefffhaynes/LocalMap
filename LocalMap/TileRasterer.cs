@@ -277,47 +277,9 @@ namespace LocalMap
                     format.FontFamily = fontFamily;
                 }
 
-                switch (textAnchor)
-                {
-                    case TextAnchor.Center:
-                        format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
-                        format.VerticalAlignment = CanvasVerticalAlignment.Center;
-                        break;
-                    case TextAnchor.Left:
-                        format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
-                        format.VerticalAlignment = CanvasVerticalAlignment.Center;
-                        break;
-                    case TextAnchor.Right:
-                        format.HorizontalAlignment = CanvasHorizontalAlignment.Right;
-                        format.VerticalAlignment = CanvasVerticalAlignment.Center;
-                        break;
-                    case TextAnchor.Top:
-                        format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
-                        format.VerticalAlignment = CanvasVerticalAlignment.Top;
-                        break;
-                    case TextAnchor.Bottom:
-                        format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
-                        format.VerticalAlignment = CanvasVerticalAlignment.Bottom;
-                        break;
-                    case TextAnchor.TopLeft:
-                        format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
-                        format.VerticalAlignment = CanvasVerticalAlignment.Top;
-                        break;
-                    case TextAnchor.TopRight:
-                        format.HorizontalAlignment = CanvasHorizontalAlignment.Right;
-                        format.VerticalAlignment = CanvasVerticalAlignment.Top;
-                        break;
-                    case TextAnchor.BottomLeft:
-                        format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
-                        format.VerticalAlignment = CanvasVerticalAlignment.Bottom;
-                        break;
-                    case TextAnchor.BottomRight:
-                        format.HorizontalAlignment = CanvasHorizontalAlignment.Right;
-                        format.VerticalAlignment = CanvasVerticalAlignment.Bottom;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                Convert(textAnchor, out var horizontalAlignment, out var verticalAlignment);
+                format.HorizontalAlignment = horizontalAlignment;
+                format.VerticalAlignment = verticalAlignment;
 
                 var layout = new CanvasTextLayout(session, name, format, 0, 0);
                 var layoutBounds = layout.LayoutBounds;
@@ -369,6 +331,51 @@ namespace LocalMap
                     session.DrawText(name, anchor, textColor, format);
                     collisionBoxes.Add(collisionBox);
                 }
+            }
+        }
+
+        private static void Convert(TextAnchor textAnchor, out CanvasHorizontalAlignment horizontalAlignment, out CanvasVerticalAlignment verticalAlignment)
+        {
+            switch (textAnchor)
+            {
+                case TextAnchor.Center:
+                    horizontalAlignment = CanvasHorizontalAlignment.Center;
+                    verticalAlignment = CanvasVerticalAlignment.Center;
+                    break;
+                case TextAnchor.Left:
+                    horizontalAlignment = CanvasHorizontalAlignment.Left;
+                    verticalAlignment = CanvasVerticalAlignment.Center;
+                    break;
+                case TextAnchor.Right:
+                    horizontalAlignment = CanvasHorizontalAlignment.Right;
+                    verticalAlignment = CanvasVerticalAlignment.Center;
+                    break;
+                case TextAnchor.Top:
+                    horizontalAlignment = CanvasHorizontalAlignment.Center;
+                    verticalAlignment = CanvasVerticalAlignment.Top;
+                    break;
+                case TextAnchor.Bottom:
+                    horizontalAlignment = CanvasHorizontalAlignment.Center;
+                    verticalAlignment = CanvasVerticalAlignment.Bottom;
+                    break;
+                case TextAnchor.TopLeft:
+                    horizontalAlignment = CanvasHorizontalAlignment.Left;
+                    verticalAlignment = CanvasVerticalAlignment.Top;
+                    break;
+                case TextAnchor.TopRight:
+                    horizontalAlignment = CanvasHorizontalAlignment.Right;
+                    verticalAlignment = CanvasVerticalAlignment.Top;
+                    break;
+                case TextAnchor.BottomLeft:
+                    horizontalAlignment = CanvasHorizontalAlignment.Left;
+                    verticalAlignment = CanvasVerticalAlignment.Bottom;
+                    break;
+                case TextAnchor.BottomRight:
+                    horizontalAlignment = CanvasHorizontalAlignment.Right;
+                    verticalAlignment = CanvasVerticalAlignment.Bottom;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
