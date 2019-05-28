@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using Mapbox.Vector.Tile;
 
-namespace MapTest
+namespace LocalMap
 {
     public static class DrawingExtensions
     {

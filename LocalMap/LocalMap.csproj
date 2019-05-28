@@ -7,8 +7,8 @@
     <ProjectGuid>{DC8FFABC-D228-4D98-8230-919562C4CDA5}</ProjectGuid>
     <OutputType>AppContainerExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>MapTest</RootNamespace>
-    <AssemblyName>MapTest</AssemblyName>
+    <RootNamespace>LocalMap</RootNamespace>
+    <AssemblyName>LocalMap</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
     <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.17763.0</TargetPlatformVersion>

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 
-namespace MapTest.Models
+namespace LocalMap.Models
 {
     [Table("images")]
     public class DataModel

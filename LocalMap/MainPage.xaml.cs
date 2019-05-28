@@ -5,10 +5,11 @@ using Windows.Storage.Streams;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Maps;
+using LocalMap;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
-namespace MapTest
+namespace LocalMap
 {
     /// <summary>
     /// An empty page that can be used on its own or navigated to within a Frame.
@@ -29,10 +30,12 @@ namespace MapTest
             dataSource.BitmapRequested += DataSourceOnBitmapRequested;
                 //new HttpMapTileDataSource("http://192.168.99.100:32771/styles/klokantech-basic/{zoomlevel}/{x}/{y}.png");
 
-            var source = new MapTileSource(dataSource) {Layer = MapTileLayer.BackgroundReplacement};
-            source.TilePixelSize = 512;
+                var source = new MapTileSource(dataSource)
+                {
+                    Layer = MapTileLayer.BackgroundReplacement, TilePixelSize = 512
+                };
 
-            Map.Style = MapStyle.None;
+                Map.Style = MapStyle.None;
             Map.MapServiceToken = "hi";
             Map.TileSources.Add(source);
         }
@@ -42,10 +45,6 @@ namespace MapTest
             var deferral = args.Request.GetDeferral();
 
             var stream = await DatabaseTileImageLoader.LoadTileAsync(new Tile(args.X, args.Y, args.ZoomLevel));
-
-            //var client = new HttpClient();
-            //var data = await
-            //    client.GetByteArrayAsync($"http://a.tile.openstreetmap.org/{args.ZoomLevel}/{args.X}/{args.Y}.png");
 
             if (stream != null)
             {

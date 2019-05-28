@@ -1,4 +1,4 @@
-﻿namespace MapTest
+﻿namespace LocalMap
 {
     public class Tile
     {

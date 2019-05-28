@@ -13,7 +13,7 @@ using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.Text;
 
-namespace MapTest
+namespace LocalMap
 {
     public static class TileRasterer
     {
@@ -114,7 +114,7 @@ namespace MapTest
             if (paint?.LineOpacity != null)
             {
                 var lineOpacity = paint.LineOpacity.GetValue(zoom);
-                lineColor.A = (byte)(lineOpacity * byte.MaxValue);
+                lineColor.A = (byte) (lineOpacity * byte.MaxValue);
             }
 
             color = paint?.TextColor?.GetValue(zoom);
@@ -230,7 +230,7 @@ namespace MapTest
                         }
 
                         var collisionBox = new Rect(new Point(collisionX, collisionY),
-                            new Size(layoutBounds.Width, layoutBounds.Height));
+                            new Size(layoutBounds.Width, layoutBounds.Height)).Expand(textPadding);
 
                         // TODO if something was drawn in one tile, draw it in others
                         if (collisionBoxes.All(box =>
@@ -297,46 +297,46 @@ namespace MapTest
 
                                 if (name != null && !names.Contains(name))
                                 {
-                                        //var pathLength = geometry.ComputePathLength();
-                                        //var textFormat = new CanvasTextFormat();
-                                        //var textLayout = new CanvasTextLayout(session, name, textFormat, 0, 0);
-                                        //var textWidth = textLayout.DrawBounds.Width;
+                                    //var pathLength = geometry.ComputePathLength();
+                                    //var textFormat = new CanvasTextFormat();
+                                    //var textLayout = new CanvasTextLayout(session, name, textFormat, 0, 0);
+                                    //var textWidth = textLayout.DrawBounds.Width;
 
-                                        //var offset = (float) (pathLength - textWidth) / 2;
+                                    //var offset = (float) (pathLength - textWidth) / 2;
 
-                                        //if (textWidth > pathLength)
-                                        //{
-                                        //    // for now just run away scared
-                                        //    return;
-                                        //}
+                                    //if (textWidth > pathLength)
+                                    //{
+                                    //    // for now just run away scared
+                                    //    return;
+                                    //}
 
-                                        var format = new CanvasTextFormat
+                                    var format = new CanvasTextFormat
+                                    {
+                                        FontSize = fontSize,
+                                        FontFamily = fontFamily,
+                                        WordWrapping = CanvasWordWrapping.NoWrap
+                                    };
+
+                                    var line = feature.Geometry[0];
+                                    var vectors = line.Select(p => p.ToVector2(scale)).ToList();
+
+                                    var start = vectors[0];
+
+                                    int charIndex = 0;
+                                    foreach (var point in vectors.Skip(1))
+                                    {
+                                        if (DrawTextOnSegment(session, name, textColor, format, ref charIndex,
+                                            ref start, point))
                                         {
-                                            FontSize = fontSize,
-                                            FontFamily = fontFamily,
-                                            WordWrapping = CanvasWordWrapping.NoWrap
-                                        };
+                                            names.Add(name);
+                                        }
 
-                                        var line = feature.Geometry[0];
-                                        var vectors = line.Select(p => p.ToVector2(scale)).ToList();
-
-                                        var start = vectors[0];
-
-                                        int charIndex = 0;
-                                        foreach (var v in vectors.Skip(1))
+                                        if (charIndex >= name.Length)
                                         {
-                                            if (DrawTextOnSegment(session, name, textColor, format, ref charIndex,
-                                                ref start, v, false))
-                                            {
-                                                names.Add(name);
-                                            }
-
-                                            if (charIndex >= name.Length)
-                                            {
-                                                break;
-                                            }
+                                            break;
                                         }
                                     }
+                                }
                             }
                         }
                     }
@@ -347,101 +347,87 @@ namespace MapTest
             }
         }
 
-        private static bool DrawTextOnSegment(CanvasDrawingSession gr, string txt, Color color, CanvasTextFormat format, ref int first_ch,
-            ref Vector2 start_point, Vector2 end_point,
-            bool text_above_segment)
+        private static bool DrawTextOnSegment(CanvasDrawingSession session, string value, Color color, CanvasTextFormat format, ref int characterIndex,
+            ref Vector2 start, Vector2 end)
         {
-            float dx = end_point.X - start_point.X;
-            float dy = end_point.Y - start_point.Y;
-            float dist = Vector2.Distance(start_point, end_point);
-            dx /= dist;
-            dy /= dist;
+            float dx = end.X - start.X;
+            float dy = end.Y - start.Y;
+            float d = Vector2.Distance(start, end);
+            dx /= d;
+            dy /= d;
 
             // See how many characters will fit.
-            //int last_ch;
-            //for (last_ch = txt.Length; last_ch > 0; last_ch--)
-            //{
-            //    string test_string =
-            //        txt.Substring(first_ch, last_ch - first_ch);
-
-            //    var textLayout = new CanvasTextLayout(gr, test_string, format, 0, 0);
-
-            //    if (textLayout.DrawBounds.Width < dist)
-            //    {
-            //        break;
-            //    }
-            //}
-
-            int last_ch = first_ch;
-            while (last_ch < txt.Length)
+            int lastCharacterIndex;
+            for (lastCharacterIndex = value.Length; lastCharacterIndex > 0; lastCharacterIndex--)
             {
-                string test_string =
-                    txt.Substring(first_ch, last_ch - first_ch + 1);
-                var textLayout = new CanvasTextLayout(gr, test_string, format, 0, 0);
+                string testValue =
+                    value.Substring(characterIndex, lastCharacterIndex - characterIndex);
 
-                if (textLayout.DrawBounds.Width > dist)
+                var textLayout = new CanvasTextLayout(session, testValue, format, 0, 0);
+
+                if (textLayout.DrawBounds.Width < d)
                 {
-                    // This is one too many characters.
-                    last_ch--;
                     break;
                 }
-                last_ch++;
             }
 
-            if (last_ch < first_ch) return false;
-            if (last_ch >= txt.Length) last_ch = txt.Length - 1;
-
-            string chars_that_fit =
-                txt.Substring(first_ch, last_ch - first_ch + 1);
-
-            var transform = gr.Transform;
-
-            var fitTextLayout = new CanvasTextLayout(gr, chars_that_fit, format, 0, 0);
-
-            // Rotate and translate to position the characters.
-            //GraphicsState state = gr.Save();
-            //if (text_above_segment)
+            //int last_ch = characterIndex;
+            //while (last_ch < value.Length)
             //{
-            //    gr.Transform = Matrix3x2.CreateTranslation(0, (float) fitTextLayout.DrawBounds.Height);
-            //    //gr.TranslateTransform(0,
-            //    //    -gr.MeasureString(chars_that_fit, font).Height,
-            //    //    MatrixOrder.Append);
+            //    string test_string =
+            //        value.Substring(characterIndex, last_ch - characterIndex + 1);
+            //    var textLayout = new CanvasTextLayout(session, test_string, format, 0, 0);
+
+            //    if (textLayout.DrawBounds.Width > dist)
+            //    {
+            //        // This is one too many characters.
+            //        last_ch--;
+            //        break;
+            //    }
+            //    last_ch++;
             //}
 
+            if (lastCharacterIndex < characterIndex)
+            {
+                // won't fit
+                return false;
+            }
+
+            if (lastCharacterIndex >= value.Length)
+            {
+                lastCharacterIndex = value.Length - 1;
+            }
+
+            string substring =
+                value.Substring(characterIndex, lastCharacterIndex - characterIndex + 1);
+
+            var transform = session.Transform;
+
+            var fitTextLayout = new CanvasTextLayout(session, substring, format, 0, 0);
 
             float angle = (float) Math.Atan2(dy, dx);
 
             if (Math.Abs(angle) > Math.PI / 2)
             {
+                // too much rotation
                 return false;
             }
 
-            var rotation = Matrix3x2.CreateRotation(angle, start_point);
-            gr.Transform = Matrix3x2.Multiply(gr.Transform, rotation);
-
-            //var translate = Matrix3x2.CreateTranslation(start_point.X, start_point.Y);
-            //gr.Transform = Matrix3x2.Multiply(gr.Transform, translate);
-
-            //gr.RotateTransform(angle, MatrixOrder.Append);
-            //gr.TranslateTransform(start_point.X, start_point.Y,
-            //    MatrixOrder.Append);
+            var rotation = Matrix3x2.CreateRotation(angle, start);
+            session.Transform = Matrix3x2.Multiply(session.Transform, rotation);
 
             // Draw the characters that fit.
-            //gr.DrawString(chars_that_fit, font, brush, 0, 0);
-            gr.DrawText(chars_that_fit, start_point, color, format);
+            session.DrawText(substring, start, color, format);
 
             // Restore the saved state.
-            //gr.Restore(state);
-            gr.Transform = transform;
+            session.Transform = transform;
 
-            // Update first_ch and start_point.
-            first_ch = last_ch + 1;
+            // Update characterIndex and start.
+            characterIndex = lastCharacterIndex + 1;
 
-            var text_width = (float) fitTextLayout.DrawBounds.Width;
+            var width = (float) fitTextLayout.DrawBounds.Width;
 
-            start_point = new Vector2(
-                start_point.X + dx * text_width,
-                start_point.Y + dy * text_width);
+            start = new Vector2(start.X + dx * width, start.Y + dy * width);
 
             return true;
         }

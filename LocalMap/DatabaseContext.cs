@@ -1,7 +1,7 @@
-﻿using MapTest.Models;
+﻿using LocalMap.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace MapTest
+namespace LocalMap
 {
     internal class DatabaseContext : DbContext
     {

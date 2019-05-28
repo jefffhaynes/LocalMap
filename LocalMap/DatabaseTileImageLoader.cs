@@ -5,9 +5,10 @@ using System.Threading.Tasks;
 using Windows.Storage.Streams;
 using Mapbox.Vector.Tile;
 using MapboxStyle;
+using LocalMap;
 using Microsoft.EntityFrameworkCore;
 
-namespace MapTest
+namespace LocalMap
 {
     public static class DatabaseTileImageLoader
     {
