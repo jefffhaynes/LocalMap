@@ -77,8 +77,7 @@ namespace LocalMap
         }
 
         private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
-            Tile tile,
-            VectorTileFeature feature, IEnumerable<Layer> styleLayers, float scale, List<Rect> collisionBoxes,
+            Tile tile, VectorTileFeature feature, IEnumerable<Layer> styleLayers, float scale, List<Rect> collisionBoxes,
             List<string> names)
         {
             Dictionary<string, string> attributes =
@@ -199,7 +198,7 @@ namespace LocalMap
                         }
 
                         var layoutTest = new CanvasTextLayout(session, name, format, 0, 0);
-                        var layoutBounds = layoutTest.DrawBounds;
+                        var layoutBounds = layoutTest.LayoutBounds;
 
                         double collisionX;
                         if (format.HorizontalAlignment == CanvasHorizontalAlignment.Center)
@@ -232,7 +231,7 @@ namespace LocalMap
                         var collisionBox = new Rect(new Point(collisionX, collisionY),
                             new Size(layoutBounds.Width, layoutBounds.Height)).Expand(textPadding);
 
-                        // TODO if something was drawn in one tile, draw it in others
+                        // TODO if something was drawn in one tile, draw it in others at the same zoom level
                         if (collisionBoxes.All(box =>
                         {
                             box.Intersect(collisionBox);
@@ -297,19 +296,6 @@ namespace LocalMap
 
                                 if (name != null && !names.Contains(name))
                                 {
-                                    //var pathLength = geometry.ComputePathLength();
-                                    //var textFormat = new CanvasTextFormat();
-                                    //var textLayout = new CanvasTextLayout(session, name, textFormat, 0, 0);
-                                    //var textWidth = textLayout.DrawBounds.Width;
-
-                                    //var offset = (float) (pathLength - textWidth) / 2;
-
-                                    //if (textWidth > pathLength)
-                                    //{
-                                    //    // for now just run away scared
-                                    //    return;
-                                    //}
-
                                     var format = new CanvasTextFormat
                                     {
                                         FontSize = fontSize,
