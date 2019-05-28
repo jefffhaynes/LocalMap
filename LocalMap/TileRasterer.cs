@@ -76,7 +76,8 @@ namespace LocalMap
         }
 
         private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
-            Tile tile, VectorTileFeature feature, IEnumerable<Layer> styleLayers, float scale, List<Rect> collisionBoxes,
+            Tile tile, VectorTileFeature feature, IEnumerable<Layer> styleLayers, float scale,
+            List<Rect> collisionBoxes,
             List<string> names)
         {
             Dictionary<string, string> attributes =
@@ -107,6 +108,13 @@ namespace LocalMap
             var color = paint?.FillColor?.GetValue(zoom);
             var fillColor = Convert(color) ?? Colors.Black;
             color = paint?.LineColor?.GetValue(zoom);
+
+            if (paint?.FillOpacity != null)
+            {
+                var fillOpacity = paint.FillOpacity.GetValue(zoom);
+                fillColor.A = (byte) (fillOpacity * byte.MaxValue);
+            }
+
             var lineColor = Convert(color) ?? Colors.Black;
 
             if (paint?.LineOpacity != null)
@@ -131,117 +139,9 @@ namespace LocalMap
 
             switch (feature.GeometryType)
             {
-                case VectorTile.Tile.Types.GeomType.Unknown:
-                    break;
                 case VectorTile.Tile.Types.GeomType.Point:
-                    foreach (var point in feature.Geometry)
-                    {
-                        var anchor = point.First().ToVector2(scale);
-
-                        if (name == null)
-                        {
-                            continue;
-                        }
-
-                        var format = new CanvasTextFormat
-                        {
-                            FontSize = fontSize,
-                            WordWrapping = CanvasWordWrapping.NoWrap
-                        };
-
-                        if (fontFamily != null)
-                        {
-                            format.FontFamily = fontFamily;
-                        }
-
-                        switch (textAnchor)
-                        {
-                            case TextAnchor.Center:
-                                format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
-                                format.VerticalAlignment = CanvasVerticalAlignment.Center;
-                                break;
-                            case TextAnchor.Left:
-                                format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
-                                format.VerticalAlignment = CanvasVerticalAlignment.Center;
-                                break;
-                            case TextAnchor.Right:
-                                format.HorizontalAlignment = CanvasHorizontalAlignment.Right;
-                                format.VerticalAlignment = CanvasVerticalAlignment.Center;
-                                break;
-                            case TextAnchor.Top:
-                                format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
-                                format.VerticalAlignment = CanvasVerticalAlignment.Top;
-                                break;
-                            case TextAnchor.Bottom:
-                                format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
-                                format.VerticalAlignment = CanvasVerticalAlignment.Bottom;
-                                break;
-                            case TextAnchor.TopLeft:
-                                format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
-                                format.VerticalAlignment = CanvasVerticalAlignment.Top;
-                                break;
-                            case TextAnchor.TopRight:
-                                format.HorizontalAlignment = CanvasHorizontalAlignment.Right;
-                                format.VerticalAlignment = CanvasVerticalAlignment.Top;
-                                break;
-                            case TextAnchor.BottomLeft:
-                                format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
-                                format.VerticalAlignment = CanvasVerticalAlignment.Bottom;
-                                break;
-                            case TextAnchor.BottomRight:
-                                format.HorizontalAlignment = CanvasHorizontalAlignment.Right;
-                                format.VerticalAlignment = CanvasVerticalAlignment.Bottom;
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
-                        }
-
-                        var layoutTest = new CanvasTextLayout(session, name, format, 0, 0);
-                        var layoutBounds = layoutTest.LayoutBounds;
-
-                        double collisionX;
-                        if (format.HorizontalAlignment == CanvasHorizontalAlignment.Center)
-                        {
-                            collisionX = anchor.X - layoutBounds.Width / 2;
-                        }
-                        else if (format.HorizontalAlignment == CanvasHorizontalAlignment.Right)
-                        {
-                            collisionX = anchor.X - layoutBounds.Width;
-                        }
-                        else
-                        {
-                            collisionX = anchor.X;
-                        }
-
-                        double collisionY;
-                        if (format.VerticalAlignment == CanvasVerticalAlignment.Center)
-                        {
-                            collisionY = anchor.Y - layoutBounds.Height / 2;
-                        }
-                        else if (format.VerticalAlignment == CanvasVerticalAlignment.Bottom)
-                        {
-                            collisionY = anchor.Y - layoutBounds.Height;
-                        }
-                        else
-                        {
-                            collisionY = anchor.Y;
-                        }
-
-                        var collisionBox = new Rect(new Point(collisionX, collisionY),
-                            new Size(layoutBounds.Width, layoutBounds.Height)).Expand(textPadding);
-
-                        // TODO if something was drawn in one tile, draw it in others at the same zoom level
-                        if (collisionBoxes.All(box =>
-                        {
-                            box.Intersect(collisionBox);
-                            return box.IsEmpty;
-                        }))
-                        {
-                            session.DrawText(name, anchor, textColor, format);
-                            collisionBoxes.Add(collisionBox);
-                        }
-                    }
-
+                    DrawLabel(session, name, feature.Geometry, scale, fontSize, fontFamily, textColor, textAnchor,
+                        textPadding, collisionBoxes);
                     break;
 
                 case VectorTile.Tile.Types.GeomType.Linestring:
@@ -315,8 +215,122 @@ namespace LocalMap
                     }
                 }
                     break;
+                case VectorTile.Tile.Types.GeomType.Unknown:
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private static void DrawLabel(CanvasDrawingSession session, string name, List<List<Coordinate>> geometry, float scale, float fontSize,
+            string fontFamily, Color textColor, TextAnchor textAnchor, double textPadding, List<Rect> collisionBoxes)
+        {
+            if (name == null)
+            {
+                return;
+            }
+
+            foreach (var point in geometry)
+            {
+                var anchor = point.First().ToVector2(scale);
+
+                var format = new CanvasTextFormat
+                {
+                    FontSize = fontSize,
+                    WordWrapping = CanvasWordWrapping.NoWrap
+                };
+
+                if (fontFamily != null)
+                {
+                    format.FontFamily = fontFamily;
+                }
+
+                switch (textAnchor)
+                {
+                    case TextAnchor.Center:
+                        format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
+                        format.VerticalAlignment = CanvasVerticalAlignment.Center;
+                        break;
+                    case TextAnchor.Left:
+                        format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
+                        format.VerticalAlignment = CanvasVerticalAlignment.Center;
+                        break;
+                    case TextAnchor.Right:
+                        format.HorizontalAlignment = CanvasHorizontalAlignment.Right;
+                        format.VerticalAlignment = CanvasVerticalAlignment.Center;
+                        break;
+                    case TextAnchor.Top:
+                        format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
+                        format.VerticalAlignment = CanvasVerticalAlignment.Top;
+                        break;
+                    case TextAnchor.Bottom:
+                        format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
+                        format.VerticalAlignment = CanvasVerticalAlignment.Bottom;
+                        break;
+                    case TextAnchor.TopLeft:
+                        format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
+                        format.VerticalAlignment = CanvasVerticalAlignment.Top;
+                        break;
+                    case TextAnchor.TopRight:
+                        format.HorizontalAlignment = CanvasHorizontalAlignment.Right;
+                        format.VerticalAlignment = CanvasVerticalAlignment.Top;
+                        break;
+                    case TextAnchor.BottomLeft:
+                        format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
+                        format.VerticalAlignment = CanvasVerticalAlignment.Bottom;
+                        break;
+                    case TextAnchor.BottomRight:
+                        format.HorizontalAlignment = CanvasHorizontalAlignment.Right;
+                        format.VerticalAlignment = CanvasVerticalAlignment.Bottom;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                var layoutTest = new CanvasTextLayout(session, name, format, 0, 0);
+                var layoutBounds = layoutTest.LayoutBounds;
+
+                double collisionX;
+                if (format.HorizontalAlignment == CanvasHorizontalAlignment.Center)
+                {
+                    collisionX = anchor.X - layoutBounds.Width / 2;
+                }
+                else if (format.HorizontalAlignment == CanvasHorizontalAlignment.Right)
+                {
+                    collisionX = anchor.X - layoutBounds.Width;
+                }
+                else
+                {
+                    collisionX = anchor.X;
+                }
+
+                double collisionY;
+                if (format.VerticalAlignment == CanvasVerticalAlignment.Center)
+                {
+                    collisionY = anchor.Y - layoutBounds.Height / 2;
+                }
+                else if (format.VerticalAlignment == CanvasVerticalAlignment.Bottom)
+                {
+                    collisionY = anchor.Y - layoutBounds.Height;
+                }
+                else
+                {
+                    collisionY = anchor.Y;
+                }
+
+                var collisionBox = new Rect(new Point(collisionX, collisionY),
+                    new Size(layoutBounds.Width, layoutBounds.Height)).Expand(textPadding);
+
+                // TODO if something was drawn in one tile, draw it in others at the same zoom level
+                if (collisionBoxes.All(box =>
+                {
+                    box.Intersect(collisionBox);
+                    return box.IsEmpty;
+                }))
+                {
+                    session.DrawText(name, anchor, textColor, format);
+                    collisionBoxes.Add(collisionBox);
+                }
             }
         }
 
