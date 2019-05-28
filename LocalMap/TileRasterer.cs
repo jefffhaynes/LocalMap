@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Storage.Streams;
@@ -306,21 +305,9 @@ namespace LocalMap
                                     var line = feature.Geometry[0];
                                     var vectors = line.Select(p => p.ToVector2(scale)).ToList();
 
-                                    var start = vectors[0];
-
-                                    int charIndex = 0;
-                                    foreach (var point in vectors.Skip(1))
+                                    if (session.DrawTextOnSegments(name, vectors, textColor, format))
                                     {
-                                        if (DrawTextOnSegment(session, name, textColor, format, ref charIndex,
-                                            ref start, point))
-                                        {
-                                            names.Add(name);
-                                        }
-
-                                        if (charIndex >= name.Length)
-                                        {
-                                            break;
-                                        }
+                                        names.Add(name);
                                     }
                                 }
                             }
@@ -331,91 +318,6 @@ namespace LocalMap
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-        }
-
-        private static bool DrawTextOnSegment(CanvasDrawingSession session, string value, Color color, CanvasTextFormat format, ref int characterIndex,
-            ref Vector2 start, Vector2 end)
-        {
-            float dx = end.X - start.X;
-            float dy = end.Y - start.Y;
-            float d = Vector2.Distance(start, end);
-            dx /= d;
-            dy /= d;
-
-            // See how many characters will fit.
-            int lastCharacterIndex;
-            for (lastCharacterIndex = value.Length; lastCharacterIndex > 0; lastCharacterIndex--)
-            {
-                string testValue =
-                    value.Substring(characterIndex, lastCharacterIndex - characterIndex);
-
-                var textLayout = new CanvasTextLayout(session, testValue, format, 0, 0);
-
-                if (textLayout.DrawBounds.Width < d)
-                {
-                    break;
-                }
-            }
-
-            //int last_ch = characterIndex;
-            //while (last_ch < value.Length)
-            //{
-            //    string test_string =
-            //        value.Substring(characterIndex, last_ch - characterIndex + 1);
-            //    var textLayout = new CanvasTextLayout(session, test_string, format, 0, 0);
-
-            //    if (textLayout.DrawBounds.Width > dist)
-            //    {
-            //        // This is one too many characters.
-            //        last_ch--;
-            //        break;
-            //    }
-            //    last_ch++;
-            //}
-
-            if (lastCharacterIndex < characterIndex)
-            {
-                // won't fit
-                return false;
-            }
-
-            if (lastCharacterIndex >= value.Length)
-            {
-                lastCharacterIndex = value.Length - 1;
-            }
-
-            string substring =
-                value.Substring(characterIndex, lastCharacterIndex - characterIndex + 1);
-
-            var transform = session.Transform;
-
-            var fitTextLayout = new CanvasTextLayout(session, substring, format, 0, 0);
-
-            float angle = (float) Math.Atan2(dy, dx);
-
-            if (Math.Abs(angle) > Math.PI / 2)
-            {
-                // too much rotation
-                return false;
-            }
-
-            var rotation = Matrix3x2.CreateRotation(angle, start);
-            session.Transform = Matrix3x2.Multiply(session.Transform, rotation);
-
-            // Draw the characters that fit.
-            session.DrawText(substring, start, color, format);
-
-            // Restore the saved state.
-            session.Transform = transform;
-
-            // Update characterIndex and start.
-            characterIndex = lastCharacterIndex + 1;
-
-            var width = (float) fitTextLayout.DrawBounds.Width;
-
-            start = new Vector2(start.X + dx * width, start.Y + dy * width);
-
-            return true;
         }
 
         private static Color? Convert(System.Drawing.Color? color)
