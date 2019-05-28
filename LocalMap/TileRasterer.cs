@@ -187,7 +187,7 @@ namespace LocalMap
                                     strokeStyle.StartCap = strokeStyle.EndCap = Convert(layout.LineCap.Value);
                                 }
 
-                                session.DrawGeometry(geometry, lineColor, lineWidth);
+                                session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
 
 
                                 // "ref" is used for motorways
