@@ -334,25 +334,29 @@ namespace MapControl
                     minZoomLevel = maxZoomLevel; // do not load lower level tiles if this is note a "base" layer
                 }
 
-                for (var z = minZoomLevel; z <= maxZoomLevel; z++)
+                for (var zoom = minZoomLevel; zoom <= maxZoomLevel; zoom++)
                 {
-                    var tileSize = 1 << (TileGrid.ZoomLevel - z);
+                    var zoomLevel = Math.Min(TileGrid.ZoomLevel, 14);
+                    var limitedZoom = Math.Min(zoom, 14);
+
+                    var tileSize = 1 << (zoomLevel - limitedZoom);
+                    //var tileSize = 1 << (TileGrid.ZoomLevel - z);
                     var x1 = (int) Math.Floor((double) TileGrid.XMin / tileSize); // may be negative
                     var x2 = TileGrid.XMax / tileSize;
                     var y1 = Math.Max(TileGrid.YMin / tileSize, 0);
-                    var y2 = Math.Min(TileGrid.YMax / tileSize, (1 << z) - 1);
+                    var y2 = Math.Min(TileGrid.YMax / tileSize, (1 << limitedZoom) - 1);
 
                     for (var y = y1; y <= y2; y++)
                     for (var x = x1; x <= x2; x++)
                     {
-                        var tile = Tiles.FirstOrDefault(t => t.ZoomLevel == z && t.X == x && t.Y == y);
+                        var tile = Tiles.FirstOrDefault(t => t.ZoomLevel == zoom && t.X == x && t.Y == y);
 
                         if (tile == null)
                         {
-                            tile = new Tile(z, x, y);
+                            tile = new Tile(zoom, x, y);
 
                             var equivalentTile = Tiles.FirstOrDefault(
-                                t => t.ZoomLevel == z && t.XIndex == tile.XIndex && t.Y == y && t.Image.Source != null);
+                                t => t.ZoomLevel == zoom && t.XIndex == tile.XIndex && t.Y == y && t.Image.Source != null);
 
                             if (equivalentTile != null)
                             {

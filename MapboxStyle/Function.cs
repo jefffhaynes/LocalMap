@@ -7,12 +7,14 @@ namespace MapboxStyle
     public abstract class Function<T>
     {
         private readonly IDictionary<double, T> _stops;
+        private readonly double _base;
         private readonly T _constValue;
         private readonly bool _isConst;
 
-        internal Function(IDictionary<double, T> stops)
+        internal Function(IDictionary<double, T> stops, double baseValue)
         {
             _stops = stops;
+            _base = baseValue;
         }
 
         internal Function(T constValue)
@@ -33,12 +35,12 @@ namespace MapboxStyle
 
             if (start.Equals(default(KeyValuePair<double, T>)))
             {
-                return end.Value;
+                return _stops.First().Value;
             }
             
             if (end.Equals(default(KeyValuePair<double, T>)))
             {
-                return start.Value;
+                return _stops.Last().Value;
             }
 
             return Interpolate(start.Key, end.Key, start.Value, end.Value, zoom);
@@ -49,12 +51,26 @@ namespace MapboxStyle
 
         protected double InterpolateDouble(double x0, double x1, double y0, double y1, double x)
         {
-            if (Math.Abs(x1 - x0) < double.Epsilon)
+            var factor = GetInterpolationFactor(x0, x1, x);
+            return (y1 - y0) * factor + y0;
+        }
+
+        private double GetInterpolationFactor(double x0, double x1, double x)
+        {
+            var delta = x1 - x0;
+            var progress = x - x0;
+            if (Math.Abs(delta) < double.Epsilon)
             {
-                return (y0 + y1) / 2;
+                return 0;
             }
 
-            return y0 + (x - x0) * (y1 - y0) / (x1 - x0);
+            if (Math.Abs(_base - 1.0f) < double.Epsilon)
+            {
+                return progress / delta;
+            }
+
+            return (Math.Pow(progress, _base) - 1) /
+                   (Math.Pow(delta, _base) - 1);
         }
     }
 }

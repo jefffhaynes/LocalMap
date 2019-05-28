@@ -23,6 +23,11 @@ namespace MapboxStyle
 
                 var stops = stopItems.ToDictionary(pair => (double) pair.First, pair => (double) pair.Last);
 
+                if (item.TryGetValue("base", StringComparison.CurrentCultureIgnoreCase, out var baseValue))
+                {
+                    return new DoubleFunction(stops, (double) baseValue);
+                }
+
                 return new DoubleFunction(stops);
             }
 

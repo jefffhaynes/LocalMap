@@ -17,8 +17,13 @@ namespace MapboxStyle
         {
             return Layers.Where(layer => layer.SourceLayer != null &&
                                          layer.SourceLayer.Equals(sourceLayer, StringComparison.CurrentCultureIgnoreCase) &&
-                                         (layer.MinimumZoom == null || layer.MinimumZoom > zoom) &&
-                                         (layer.MaximumZoom == null || layer.MaximumZoom < zoom));
+                                         (layer.MinimumZoom == null || layer.MinimumZoom < zoom) &&
+                                         (layer.MaximumZoom == null || layer.MaximumZoom > zoom));
+        }
+
+        public Layer Background
+        {
+            get { return Layers.FirstOrDefault(layer => layer.Type == LayerType.Background); }
         }
     }
 }

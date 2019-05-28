@@ -4,7 +4,7 @@ namespace MapboxStyle
 {
     public class DoubleFunction : Function<double>
     {
-        internal DoubleFunction(IDictionary<double, double> stops) : base(stops)
+        internal DoubleFunction(IDictionary<double, double> stops, double baseValue = 1.0) : base(stops, baseValue)
         {
         }
 

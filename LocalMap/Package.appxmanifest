@@ -1,28 +1,59 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" IgnorableNamespaces="uap mp">
-  <Identity Name="cda7b8ab-389d-421d-b2a4-05c435d619e3" Publisher="CN=feedy" Version="1.0.0.0" />
-  <mp:PhoneIdentity PhoneProductId="cda7b8ab-389d-421d-b2a4-05c435d619e3" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
+
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap4="http://schemas.microsoft.com/appx/manifest/uap/windows10/4"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  IgnorableNamespaces="uap mp uap3">
+
+  <Identity
+    Name="bc37f542-c783-4f2c-aa36-e83b04d5277e"
+    Publisher="CN=feedy"
+    Version="1.0.0.0" />
+
+  <mp:PhoneIdentity PhoneProductId="bc37f542-c783-4f2c-aa36-e83b04d5277e" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+
   <Properties>
     <DisplayName>MapTest</DisplayName>
     <PublisherDisplayName>feedy</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
+
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.0.0" MaxVersionTested="10.0.0.0" />
   </Dependencies>
+
   <Resources>
-    <Resource Language="x-generate" />
+    <Resource Language="x-generate"/>
   </Resources>
+
   <Applications>
-    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="MapTest.App">
-      <uap:VisualElements DisplayName="MapTest" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" Description="MapTest" BackgroundColor="transparent">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png">
-        </uap:DefaultTile>
+    <Application Id="App"
+      Executable="$targetnametoken$.exe"
+      EntryPoint="MapTest.App">
+      <uap:VisualElements
+        DisplayName="MapTest"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png"
+        Description="MapTest"
+        BackgroundColor="transparent">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
+      <Extensions>
+        <uap4:Extension Category="windows.loopbackAccessRules">
+          <uap4:LoopbackAccessRules>
+            <uap4:Rule Direction="out" PackageFamilyName="bc37f542-c783-4f2c-aa36-e83b04d5277e_46d357331cg30" />
+            <uap4:Rule Direction="in" PackageFamilyName="bc37f542-c783-4f2c-aa36-e83b04d5277e_46d357331cg30" />
+          </uap4:LoopbackAccessRules>
+        </uap4:Extension>
+      </Extensions>
     </Application>
   </Applications>
+
   <Capabilities>
-    <DeviceCapability Name="location" />
+    <Capability Name="internetClient" />
   </Capabilities>
 </Package>

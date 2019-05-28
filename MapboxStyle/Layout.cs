@@ -14,6 +14,12 @@ namespace MapboxStyle
         [JsonProperty("text-size")]
         public DoubleFunction TextSize { get; set; }
 
+        [JsonProperty("text-anchor")]
+        public TextAnchor? TextAnchor { get; set; }
+
+        [JsonProperty("text-padding")]
+        public DoubleFunction TextPadding { get; set; }
+
         [JsonProperty("line-cap")]
         public LineCap? LineCap { get; set; }
 

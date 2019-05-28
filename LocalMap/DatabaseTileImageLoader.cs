@@ -1,38 +1,34 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
+using Windows.Storage.Streams;
 using Mapbox.Vector.Tile;
 using MapboxStyle;
-using MapControl;
 using Microsoft.EntityFrameworkCore;
-using MapTileLayer = MapControl.MapTileLayer;
-using Tile = MapControl.Tile;
 
 namespace MapTest
 {
-    public class DatabaseTileImageLoader : ITileImageLoader
+    public static class DatabaseTileImageLoader
     {
-        private Style _style;
+        private static Style _style;
 
-        public async Task LoadTilesAsync(MapTileLayer tileLayer)
+        //public async Task LoadTilesAsync(MapTileLayer tileLayer)
+        //{
+        //    var pendingTiles = tileLayer.Tiles.Where(tile => tile.Pending);
+
+        //    foreach (var pendingTile in pendingTiles)
+        //    {
+        //        await LoadTileAsync(pendingTile);
+        //    }
+
+        //    //var tileLoadTasks = pendingTiles.Select(async tile => await LoadTileAsync(tile));
+        //    //return Task.WhenAll(tileLoadTasks);
+        //}
+
+        public static async Task<IRandomAccessStream> LoadTileAsync(Tile tile)
         {
-            var pendingTiles = tileLayer.Tiles.Where(tile => tile.Pending);
-
-            foreach (var pendingTile in pendingTiles)
-            {
-                await LoadTileAsync(pendingTile);
-            }
-
-            //var tileLoadTasks = pendingTiles.Select(async tile => await LoadTileAsync(tile));
-            //return Task.WhenAll(tileLoadTasks);
-        }
-
-        private async Task LoadTileAsync(Tile tile)
-        {
-            LoadStyle(tile.ZoomLevel);
+            LoadStyle();
 
             using (var db = new DatabaseContext())
             {
@@ -44,7 +40,7 @@ namespace MapTest
 
                 if (tileModel == null)
                 {
-                    return;
+                    return null;
                 }
 
                 List<VectorTileLayer> layers;
@@ -55,29 +51,30 @@ namespace MapTest
                     layers = VectorTileParser.Parse(gzipStream);
                 }
                 
-                await TileRasterer.RasterAsync(tile, layers, _style);
+                return await TileRasterer.RasterAsync(tile, layers, _style);
             }
         }
 
-        private readonly object _styleLock = new object();
+        private static readonly object StyleLock = new object();
 
-        private void LoadStyle(double zoom)
+        private static void LoadStyle()
         {
             if (_style != null)
             {
                 return;
             }
 
-            lock (_styleLock)
+            lock (StyleLock)
             {
                 if (_style != null)
                 {
                     return;
                 }
 
-                var assembly = GetType().Assembly;
-                
-                using (var stream = assembly.GetManifestResourceStream("LocalMap.style.json"))
+                var assembly = typeof(DatabaseTileImageLoader).Assembly;
+
+                var resourceName = $"{assembly.GetName().Name}.style.json";
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
                 {
                     _style = StyleSerializer.Deserialize(stream);
                 }

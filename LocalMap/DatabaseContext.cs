@@ -11,7 +11,7 @@ namespace MapTest
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlite("Filename=2017-07-03_planet_z0_z14.db");
+            optionsBuilder.UseSqlite("Filename=2017-07-03_planet_z0_z14.mbtiles");
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

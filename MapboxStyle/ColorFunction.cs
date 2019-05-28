@@ -5,7 +5,7 @@ namespace MapboxStyle
 {
     public class ColorFunction : Function<Color>
     {
-        internal ColorFunction(IDictionary<double, Color> stops) : base(stops)
+        internal ColorFunction(IDictionary<double, Color> stops, double baseValue = 1.0) : base(stops, baseValue)
         {
         }
 

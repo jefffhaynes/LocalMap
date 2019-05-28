@@ -24,6 +24,11 @@ namespace MapboxStyle
                 var stops = stopItems.ToDictionary(pair => (double) pair.First,
                     pair => ((string) pair.Last).ParseHtmlColor());
 
+                if (item.TryGetValue("base", StringComparison.CurrentCultureIgnoreCase, out var baseValue))
+                {
+                    return new ColorFunction(stops, (double) baseValue);
+                }
+
                 return new ColorFunction(stops);
             }
 

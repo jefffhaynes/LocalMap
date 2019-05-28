@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <ProjectGuid>{D5F9B34B-0228-4343-8679-A9CC76D8F9F4}</ProjectGuid>
+    <ProjectGuid>{DC8FFABC-D228-4D98-8230-919562C4CDA5}</ProjectGuid>
     <OutputType>AppContainerExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>LocalMap</RootNamespace>
-    <AssemblyName>LocalMap</AssemblyName>
+    <RootNamespace>MapTest</RootNamespace>
+    <AssemblyName>MapTest</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
     <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.17763.0</TargetPlatformVersion>
@@ -128,6 +128,8 @@
     <Compile Include="Models\DataModel.cs" />
     <Compile Include="Models\TileModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RectExtensions.cs" />
+    <Compile Include="Tile.cs" />
     <Compile Include="TileRasterer.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -160,14 +162,11 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore">
-      <Version>2.2.2</Version>
-    </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite">
-      <Version>2.2.2</Version>
+      <Version>2.2.4</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
-      <Version>6.2.3</Version>
+      <Version>6.2.8</Version>
     </PackageReference>
     <PackageReference Include="Win2D.uwp">
       <Version>1.23.0</Version>
@@ -175,16 +174,12 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MapboxStyle\MapboxStyle.csproj">
-      <Project>{fd859f86-3379-406a-a82c-3cb5cd61a6ea}</Project>
+      <Project>{f13ba9ba-5d97-4c50-bba1-f61bc59ddd8d}</Project>
       <Name>MapboxStyle</Name>
     </ProjectReference>
     <ProjectReference Include="..\MapboxVectorTile\MapboxVectorTile.csproj">
-      <Project>{5f0bb08b-051e-4cac-b0ea-b6a5056cc35e}</Project>
+      <Project>{249e7a50-b958-4e29-8c7c-044541f415fb}</Project>
       <Name>MapboxVectorTile</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\MapControl\UWP\MapControl.UWP.csproj">
-      <Project>{9545f73c-9c35-4cf6-baae-19a0baebd344}</Project>
-      <Name>MapControl.UWP</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
