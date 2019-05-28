@@ -190,6 +190,12 @@ namespace LocalMap
                             if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
                             {
                                 session.FillGeometry(geometry, fillColor);
+                                var fillOutlineColor = Convert(paint?.FillOutlineColor?.GetValue(zoom));
+
+                                if (fillOutlineColor != null)
+                                {
+                                    session.DrawGeometry(geometry, Vector2.Zero, fillOutlineColor.Value);
+                                }
                             }
                             else
                             {

@@ -7,6 +7,9 @@ namespace MapboxStyle
 {
     public class Style
     {
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
         [JsonProperty("version")]
         public int Version { get; set; }
 

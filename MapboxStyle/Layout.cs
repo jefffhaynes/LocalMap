@@ -31,5 +31,11 @@ namespace MapboxStyle
 
         [JsonProperty("line-dasharray")]
         public List<float> LineDashArray { get; set; }
+
+        [JsonProperty("symbol-placement")]
+        public SymbolPlacement SymbolPlacement { get; set; }
+
+        [JsonProperty("symbol-spacing")]
+        public DoubleFunction SymbolSpacing { get; set; }
     }
 }
