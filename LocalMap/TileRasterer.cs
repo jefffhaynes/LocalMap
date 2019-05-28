@@ -325,7 +325,7 @@ namespace LocalMap
                     if (textHaloColor != null)
                     {
                         var textGeometry = CanvasGeometry.CreateText(layout);
-                        session.DrawGeometry(textGeometry, Vector2.Zero, textHaloColor.Value, textHaloWidth * 2);
+                        session.DrawGeometry(textGeometry, anchor, textHaloColor.Value, textHaloWidth * 2);
                     }
 
                     session.DrawText(name, anchor, textColor, format);

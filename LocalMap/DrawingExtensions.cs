@@ -54,36 +54,21 @@ namespace LocalMap
             dx /= distance;
             dy /= distance;
 
-            // See how many characters will fit.
-            int lastCharacterIndex;
-            for (lastCharacterIndex = value.Length; lastCharacterIndex > 0; lastCharacterIndex--)
+            int lastCharacterIndex = characterIndex;
+            while (lastCharacterIndex < value.Length)
             {
                 string testValue =
-                    value.Substring(characterIndex, lastCharacterIndex - characterIndex);
-
+                    value.Substring(characterIndex, lastCharacterIndex - characterIndex + 1);
                 var textLayout = new CanvasTextLayout(session, testValue, format, 0, 0);
 
-                if (textLayout.DrawBounds.Width < distance)
+                if (textLayout.DrawBounds.Width > distance)
                 {
+                    // This is one too many characters.
+                    lastCharacterIndex--;
                     break;
                 }
+                lastCharacterIndex++;
             }
-
-            //int last_ch = characterIndex;
-            //while (last_ch < value.Length)
-            //{
-            //    string test_string =
-            //        value.Substring(characterIndex, last_ch - characterIndex + 1);
-            //    var textLayout = new CanvasTextLayout(session, test_string, format, 0, 0);
-
-            //    if (textLayout.DrawBounds.Width > dist)
-            //    {
-            //        // This is one too many characters.
-            //        last_ch--;
-            //        break;
-            //    }
-            //    last_ch++;
-            //}
 
             if (lastCharacterIndex < characterIndex)
             {
