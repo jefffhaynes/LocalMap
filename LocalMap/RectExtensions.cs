@@ -8,5 +8,13 @@ namespace LocalMap
         {
             return new Rect(rect.X - value, rect.Y - value, rect.Width + value, rect.Height + value);
         }
+
+        public static bool Contains(this Rect r, Rect rectangle)
+        {
+            return r.Left < rectangle.Left &&
+                   r.Right > rectangle.Right &&
+                   r.Top < rectangle.Top &&
+                   r.Bottom > rectangle.Bottom;
+        }
     }
 }

@@ -315,7 +315,12 @@ namespace LocalMap
                     var collisionSize = new Size(layoutBounds.Width, layoutBounds.Height);
                     var collisionBox = new Rect(collisionPoint, collisionSize).Expand(textPadding);
 
-                    // TODO if something was drawn in one tile, draw it in others at the same zoom level
+                    var clippingRect = new Rect(0, 0, TileSize, TileSize);
+                    if (!clippingRect.Contains(collisionBox))
+                    {
+                        return;
+                    }
+
                     if (collisionBoxes.All(box =>
                     {
                         box.Intersect(collisionBox);
