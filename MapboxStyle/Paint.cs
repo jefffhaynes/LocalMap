@@ -63,7 +63,7 @@ namespace MapboxStyle
         public DoubleFunction LineBlur { get; set; }
 
         [JsonProperty("line-dasharray")]
-        public List<double> LineDashArray { get; set; }
+        public List<float> LineDashArray { get; set; }
 
         [JsonProperty("line-pattern")]
         public string LinePattern { get; set; }

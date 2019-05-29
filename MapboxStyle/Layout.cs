@@ -32,9 +32,6 @@ namespace MapboxStyle
         [JsonProperty("line-join")]
         public LineJoin? LineJoin { get; set; }
 
-        [JsonProperty("line-dasharray")]
-        public List<float> LineDashArray { get; set; }
-
         [JsonProperty("symbol-placement")]
         public SymbolPlacement SymbolPlacement { get; set; }
 

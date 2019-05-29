@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -195,52 +196,53 @@ namespace LocalMap
 
                         using (var geometry = CanvasGeometry.CreatePath(pathBuilder))
                         {
-                            if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
+                            using (var strokeStyle = new CanvasStrokeStyle())
                             {
-                                session.FillGeometry(geometry, fillColor);
-                                var fillOutlineColor = Convert(paint?.FillOutlineColor?.GetValue(zoom));
-
-                                if (fillOutlineColor != null)
+                                if (paint?.LineDashArray != null)
                                 {
-                                    session.DrawGeometry(geometry, fillOutlineColor.Value, 1.0f);
+                                    strokeStyle.CustomDashStyle = paint.LineDashArray.Select(a => a / scale).ToArray();
                                 }
-                            }
-                            else
-                            {
-                                using (var strokeStyle = new CanvasStrokeStyle())
+
+                                if (layout?.LineCap != null)
                                 {
-                                    if (layout?.LineDashArray != null)
-                                    {
-                                        strokeStyle.CustomDashStyle = layout.LineDashArray.ToArray();
-                                    }
+                                    strokeStyle.StartCap = strokeStyle.EndCap = Convert(layout.LineCap.Value);
+                                }
 
-                                    if (layout?.LineCap != null)
-                                    {
-                                        strokeStyle.StartCap = strokeStyle.EndCap = Convert(layout.LineCap.Value);
-                                    }
+                                if (layout?.LineJoin != null)
+                                {
+                                    strokeStyle.LineJoin = Convert(layout.LineJoin.Value);
+                                }
 
-                                    if (layout?.LineJoin != null)
-                                    {
-                                        strokeStyle.LineJoin = Convert(layout.LineJoin.Value);
-                                    }
+                                if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
+                                {
+                                    session.FillGeometry(geometry, fillColor);
+                                    var fillOutlineColor = Convert(paint?.FillOutlineColor?.GetValue(zoom));
 
+                                    if (fillOutlineColor != null)
+                                    {
+                                        session.DrawGeometry(geometry, fillOutlineColor.Value, 1.0f / scale,
+                                            strokeStyle);
+                                    }
+                                }
+                                else
+                                {
                                     session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
-                                }
 
 
-                                // "ref" is used for motorways
-                                //attributes.TryGetValue("ref", out var refName);
+                                    // "ref" is used for motorways
+                                    //attributes.TryGetValue("ref", out var refName);
 
-                                if (name != null && !names.Contains(name))
-                                {
-                                    using (var format = new CanvasTextFormat {FontSize = fontSize, FontFamily = fontFamily, WordWrapping = CanvasWordWrapping.NoWrap})
+                                    if (name != null && !names.Contains(name))
                                     {
-                                        var line = feature.Geometry[0];
-                                        var vectors = line.Select(p => p.ToVector2(scale)).ToList();
-
-                                        if (session.DrawTextOnSegments(name, vectors, textColor, format))
+                                        using (var format = new CanvasTextFormat {FontSize = fontSize, FontFamily = fontFamily, WordWrapping = CanvasWordWrapping.NoWrap})
                                         {
-                                            names.Add(name);
+                                            var line = feature.Geometry[0];
+                                            var vectors = line.Select(p => p.ToVector2(scale)).ToList();
+
+                                            if (session.DrawTextOnSegments(name, vectors, textColor, format))
+                                            {
+                                                names.Add(name);
+                                            }
                                         }
                                     }
                                 }
@@ -334,7 +336,7 @@ namespace LocalMap
                         }
 
                         session.DrawTextLayout(layout, collisionPoint.ToVector2(), textColor);
-                        session.DrawRectangle(collisionBox, Colors.Purple);
+                        //session.DrawRectangle(collisionBox, Colors.Purple);
                         collisionBoxes.Add(collisionBox);
                     }
                 }
