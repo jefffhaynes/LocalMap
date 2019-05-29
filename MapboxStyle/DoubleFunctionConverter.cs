@@ -18,17 +18,29 @@ namespace MapboxStyle
 
             if (value is null)
             {
-                var item = JObject.Load(reader);
-                var stopItems = item["stops"];
-
-                var stops = stopItems.ToDictionary(pair => (double) pair.First, pair => (double) pair.Last);
-
-                if (item.TryGetValue("base", StringComparison.CurrentCultureIgnoreCase, out var baseValue))
+                if (reader.TokenType == JsonToken.StartArray)
                 {
-                    return new DoubleFunction(stops, (double) baseValue);
-                }
+                    // expression
 
-                return new DoubleFunction(stops);
+                    var array = JArray.Load(reader);
+
+                }
+                else
+                {
+                    // function
+
+                    var item = JObject.Load(reader);
+                    var stopItems = item["stops"];
+
+                    var stops = stopItems.ToDictionary(pair => (double) pair.First, pair => (double) pair.Last);
+
+                    if (item.TryGetValue("base", StringComparison.CurrentCultureIgnoreCase, out var baseValue))
+                    {
+                        return new DoubleFunction(stops, (double) baseValue);
+                    }
+
+                    return new DoubleFunction(stops);
+                }
             }
 
             if (value is double d)

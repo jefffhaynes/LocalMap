@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace MapboxStyle
 {
-    public abstract class Function<T>
+    public abstract class Function<T> : IExpression<T>
     {
         private readonly IDictionary<double, T> _stops;
         private readonly double _base;

@@ -234,8 +234,13 @@ namespace LocalMap
 
                                     if (name != null && !names.Contains(name))
                                     {
-                                        using (var format = new CanvasTextFormat {FontSize = fontSize, FontFamily = fontFamily, WordWrapping = CanvasWordWrapping.NoWrap})
+                                        using (var format = new CanvasTextFormat {FontSize = fontSize, WordWrapping = CanvasWordWrapping.NoWrap})
                                         {
+                                            if (fontFamily != null)
+                                            {
+                                                format.FontFamily = fontFamily;
+                                            }
+
                                             var line = feature.Geometry[0];
                                             var vectors = line.Select(p => p.ToVector2(scale)).ToList();
 
