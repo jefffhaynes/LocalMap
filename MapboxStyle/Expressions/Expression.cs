@@ -1,12 +1,15 @@
-﻿using System;
+﻿using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace MapboxStyle.Expressions
 {
-    public class Expression<T> : IExpression<T>
+    public abstract class Expression<T>
     {
-        public T GetValue(double zoom)
-        {
-            throw new NotImplementedException();
-        }
+        public abstract T Evaluate(double zoom);
+    }
+
+    public abstract class NumericExpression : Expression<double>
+    {
+        protected NumericExpressionFactory Factory = new NumericExpressionFactory();
     }
 }

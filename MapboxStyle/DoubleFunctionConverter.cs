@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using MapboxStyle.Expressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -21,14 +22,13 @@ namespace MapboxStyle
                 if (reader.TokenType == JsonToken.StartArray)
                 {
                     // expression
-
                     var array = JArray.Load(reader);
-
+                    var factory = new NumericExpressionFactory();
+                    var expression = factory.GetExpression(array);
                 }
                 else
                 {
                     // function
-
                     var item = JObject.Load(reader);
                     var stopItems = item["stops"];
 
