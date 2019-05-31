@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using MapboxStyle.Expressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -16,12 +17,22 @@ namespace MapboxStyle
             JsonSerializer serializer)
         {
             var array = JArray.Load(reader);
-            return GetFilter(array);
+
+            //try
+            {
+                var factory = new BoolExpressionFactory();
+                return factory.GetExpression(array);
+            }
+            //catch
+            {
+                // fallback to legacy filter format
+                //return GetFilter(array);
+            }
         }
 
         public override bool CanConvert(Type objectType)
         {
-            return objectType == typeof(Filter);
+            return objectType == typeof(IExpression<bool>);
         }
 
         private static Filter GetFilter(JArray array)

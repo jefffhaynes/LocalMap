@@ -24,7 +24,7 @@ namespace MapboxStyle
                     // expression
                     var array = JArray.Load(reader);
                     var factory = new NumericExpressionFactory();
-                    var expression = factory.GetExpression(array);
+                    return factory.GetExpression(array);
                 }
                 else
                 {
@@ -63,7 +63,7 @@ namespace MapboxStyle
 
         public override bool CanConvert(Type objectType)
         {
-            return objectType == typeof(DoubleFunction);
+            return objectType == typeof(IExpression<double>);
         }
     }
 }

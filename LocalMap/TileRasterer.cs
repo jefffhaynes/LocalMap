@@ -38,12 +38,12 @@ namespace LocalMap
                             session.Antialiasing = CanvasAntialiasing.Antialiased;
                             session.TextAntialiasing = CanvasTextAntialiasing.ClearType;
 
-                            var background = Convert(style.Background?.Paint?.BackgroundColor?.GetValue(0));
+                            //var background = Convert(style.Background?.Paint?.BackgroundColor?.Evaluate(0));
 
-                            if (background != null)
-                            {
-                                session.FillRectangle(new Rect(0, 0, TileSize, TileSize), background.Value);
-                            }
+                            //if (background != null)
+                            //{
+                            //    session.FillRectangle(new Rect(0, 0, TileSize, TileSize), background.Value);
+                            //}
 
                             List<Rect> boxes = new List<Rect>();
                             foreach (var layer in layers)
@@ -94,11 +94,12 @@ namespace LocalMap
                 return;
             }
 
+            var zoom = tile.ZoomLevel;
+
             var activeLayers = styleLayers.Where(styleLayer => styleLayer.Filter == null ||
-                                                               styleLayer.Filter.Evaluate(filterType.Value, feature.Id,
+                                                               styleLayer.Filter.Evaluate(filterType.Value, feature.Id,zoom,
                                                                    attributes)).ToList();
 
-            var zoom = tile.ZoomLevel;
 
             var activeLayer = activeLayers.FirstOrDefault();
 
@@ -108,13 +109,13 @@ namespace LocalMap
             }
 
             var paint = activeLayer?.Paint;
-            var color = paint?.FillColor?.GetValue(zoom);
+            var color = paint?.FillColor?.Evaluate(filterType.Value, feature.Id, zoom, attributes);
             var fillColor = Convert(color) ?? Colors.Black;
-            color = paint?.LineColor?.GetValue(zoom);
+            color = paint?.LineColor?.Evaluate(filterType.Value, feature.Id, zoom, attributes);
 
             if (paint?.FillOpacity != null)
             {
-                var fillOpacity = paint.FillOpacity.GetValue(zoom);
+                var fillOpacity = paint.FillOpacity.Evaluate(filterType.Value, feature.Id, zoom, attributes);
                 fillColor.A = (byte) (fillOpacity * byte.MaxValue);
             }
 
@@ -122,24 +123,24 @@ namespace LocalMap
 
             if (paint?.LineOpacity != null)
             {
-                var lineOpacity = paint.LineOpacity.GetValue(zoom);
+                var lineOpacity = paint.LineOpacity.Evaluate(filterType.Value, feature.Id, zoom, attributes);
                 lineColor.A = (byte) (lineOpacity * byte.MaxValue);
             }
 
-            color = paint?.TextColor?.GetValue(zoom);
-            var lineWidth = (float?) paint?.LineWidth?.GetValue(zoom) ?? 1.0f;
+            color = paint?.TextColor?.Evaluate(filterType.Value, feature.Id, zoom, attributes);
+            var lineWidth = (float?) paint?.LineWidth?.Evaluate(filterType.Value, feature.Id, zoom, attributes) ?? 1.0f;
             var textColor = Convert(color) ?? Colors.Black;
 
-            color = paint?.TextHaloColor?.GetValue(zoom);
+            color = paint?.TextHaloColor?.Evaluate(filterType.Value, feature.Id, zoom, attributes);
             var textHaloColor = Convert(color);
-            var textHaloWidth = (float?) paint?.TextHaloWidth?.GetValue(zoom) ?? 0.0f;
+            var textHaloWidth = (float?) paint?.TextHaloWidth?.Evaluate(filterType.Value, feature.Id, zoom, attributes) ?? 0.0f;
 
             var layout = activeLayer?.Layout;
-            var fontSize = (float?) layout?.TextSize?.GetValue(zoom) ?? 16.0f;
+            var fontSize = (float?) layout?.TextSize?.Evaluate(filterType.Value, feature.Id, zoom, attributes) ?? 16.0f;
             fontSize *= TileSize / 256;
 
             var fontFamily = layout?.TextFont?.FirstOrDefault();
-            var textPadding = layout?.TextPadding?.GetValue(zoom) ?? 2.0;
+            var textPadding = layout?.TextPadding?.Evaluate(filterType.Value, feature.Id, zoom, attributes) ?? 2.0;
 
             if (attributes.TryGetValue("name", out var name))
             {
@@ -164,7 +165,7 @@ namespace LocalMap
                     var anchor = point.ToVector2(scale);
 
                     var textAnchor = layout?.TextAnchor ?? TextAnchor.Center;
-                    var maximumTextWidth = (float?) layout?.MaximumTextWidth?.GetValue(zoom) ?? 10.0f;
+                    var maximumTextWidth = (float?) layout?.MaximumTextWidth?.Evaluate(filterType.Value, feature.Id, zoom, attributes) ?? 10.0f;
 
                     DrawLabel(session, name, anchor, fontSize, fontFamily, textColor, textAnchor, maximumTextWidth,
                         textPadding, textHaloColor, textHaloWidth, collisionBoxes);
@@ -216,7 +217,7 @@ namespace LocalMap
                                 if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
                                 {
                                     session.FillGeometry(geometry, fillColor);
-                                    var fillOutlineColor = Convert(paint?.FillOutlineColor?.GetValue(zoom));
+                                    var fillOutlineColor = Convert(paint?.FillOutlineColor?.Evaluate(filterType.Value, feature.Id, zoom, attributes));
 
                                     if (fillOutlineColor != null)
                                     {

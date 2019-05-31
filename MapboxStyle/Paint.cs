@@ -15,13 +15,13 @@ namespace MapboxStyle
         public string BackgroundPattern { get; set; }
 
         [JsonProperty("background-opacity")]
-        public DoubleFunction BackgroundOpacity { get; set; }
+        public IExpression<double> BackgroundOpacity { get; set; }
 
         [JsonProperty("fill-antialias")]
         public bool? FillAntialias { get; set; }
 
         [JsonProperty("fill-opacity")]
-        public DoubleFunction FillOpacity { get; set; }
+        public IExpression<double> FillOpacity { get; set; }
 
         [JsonProperty("fill-color")]
         public ColorFunction FillColor { get; set; }
@@ -36,13 +36,13 @@ namespace MapboxStyle
         public string FillPattern { get; set; }
 
         [JsonProperty("line-miter-limit")]
-        public DoubleFunction LineMiterLimit { get; set; }
+        public IExpression<double> LineMiterLimit { get; set; }
 
         [JsonProperty("line-round-limit")]
-        public DoubleFunction LineRoundLimit { get; set; }
+        public IExpression<double> LineRoundLimit { get; set; }
 
         [JsonProperty("line-opacity")]
-        public DoubleFunction LineOpacity { get; set; }
+        public IExpression<double> LineOpacity { get; set; }
 
         [JsonProperty("line-color")]
         public ColorFunction LineColor { get; set; }
@@ -51,16 +51,16 @@ namespace MapboxStyle
         public List<double> LineTranslate { get; set; }
 
         [JsonProperty("line-width")]
-        public DoubleFunction LineWidth { get; set; }
+        public IExpression<double> LineWidth { get; set; }
 
         [JsonProperty("line-gap-width")]
-        public DoubleFunction LineGapWidth { get; set; }
+        public IExpression<double> LineGapWidth { get; set; }
 
         [JsonProperty("line-offset")]
-        public DoubleFunction LineOffset { get; set; }
+        public IExpression<double> LineOffset { get; set; }
 
         [JsonProperty("line-blur")]
-        public DoubleFunction LineBlur { get; set; }
+        public IExpression<double> LineBlur { get; set; }
 
         [JsonProperty("line-dasharray")]
         public List<float> LineDashArray { get; set; }
@@ -72,12 +72,12 @@ namespace MapboxStyle
         public ColorFunction TextColor { get; set; }
 
         [JsonProperty("text-halo-blur")]
-        public DoubleFunction TextHaloBlur { get; set; }
+        public IExpression<double> TextHaloBlur { get; set; }
 
         [JsonProperty("text-halo-color")]
         public ColorFunction TextHaloColor { get; set; }
 
         [JsonProperty("text-halo-width")]
-        public DoubleFunction TextHaloWidth { get; set; }
+        public IExpression<double> TextHaloWidth { get; set; }
     }
 }

@@ -1,15 +1,14 @@
-﻿using System.Linq;
-using Newtonsoft.Json.Linq;
+﻿using System.Collections.Generic;
 
 namespace MapboxStyle.Expressions
 {
-    public abstract class Expression<T>
+    public abstract class Expression<T> : IExpression<T>
     {
-        public abstract T Evaluate(double zoom);
+        public abstract T Evaluate(FilterType featureType, string featureId, double zoom,
+            IDictionary<string, string> featureProperties);
     }
 
     public abstract class NumericExpression : Expression<double>
     {
-        protected NumericExpressionFactory Factory = new NumericExpressionFactory();
     }
 }

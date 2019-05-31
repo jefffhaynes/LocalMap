@@ -23,7 +23,7 @@ namespace MapboxStyle
             _isConst = true;
         }
 
-        public T GetValue(double zoom)
+        public T Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
         {
             if (_isConst)
             {

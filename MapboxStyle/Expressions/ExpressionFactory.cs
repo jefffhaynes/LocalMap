@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -22,6 +23,63 @@ namespace MapboxStyle.Expressions
             return base.GetExpression(op, parameters);
         }
     }
+
+    public class BoolExpressionFactory : ExpressionFactory<bool>
+    {
+        protected override Expression<bool> GetExpression(ExpressionOperator op, JArray parameters)
+        {
+            switch (op)
+            {
+                case ExpressionOperator.Match:
+                    return new MatchExpression(parameters);
+                case ExpressionOperator.Equal:
+                    return new EqualExpression(parameters);
+            }
+            return base.GetExpression(op, parameters);
+        }
+    }
+
+    public class EqualExpression : Expression<bool>
+    {
+        public EqualExpression(JArray parameters)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class StringExpressionFactory : ExpressionFactory<string>
+    {
+        protected override Expression<string> GetExpression(ExpressionOperator op, JArray parameters)
+        {
+            switch (op)
+            {
+                case ExpressionOperator.Get:
+                    return new GetExpression(parameters);
+            }
+            return base.GetExpression(op, parameters);
+        }
+    }
+
+    public class GetExpression : Expression<string>
+    {
+        public GetExpression(JArray parameters)
+        {
+            ParameterName = parameters.First.ToString();
+        }
+
+        public string ParameterName { get; }
+
+        public override string Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        {
+            return featureProperties[ParameterName];
+        }
+    }
+
 
     public class ExpressionFactory<T>
     {
@@ -194,7 +252,7 @@ namespace MapboxStyle.Expressions
 
     public class ZoomExpression : NumericExpression
     {
-        public override double Evaluate(double zoom)
+        public override double Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
         {
             return zoom;
         }
@@ -242,12 +300,6 @@ namespace MapboxStyle.Expressions
         {
         }
 
-        public override double Evaluate(double zoom)
-        {
-            throw new NotImplementedException();
-        }
-
-
         protected override Expression<double> GetStopExpression(JToken token)
         {
             if (token is JArray array)
@@ -258,6 +310,11 @@ namespace MapboxStyle.Expressions
 
             var value = token.ToObject<double>();
             return new ConstantNumericExpression(value);
+        }
+
+        public override double Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -283,9 +340,41 @@ namespace MapboxStyle.Expressions
 
         public double Value { get; }
 
-        public override double Evaluate(double zoom)
+        public override double Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
         {
             return Value;
+        }
+    }
+
+    public class MatchExpression : Expression<bool>
+    {
+        public MatchExpression(JArray parameters)
+        {
+            var matchArray = (JArray) parameters.SkipInto().First;
+
+            if (parameters.First is JArray expressionArray)
+            {
+                // expression
+
+                // see what we're matching against
+                var firstItem = matchArray[0];
+                var type = firstItem.Type;
+
+                if (type == JTokenType.String)
+                {
+                    var factory = new StringExpressionFactory();
+                    var expression = factory.GetExpression(expressionArray);
+                }
+            }
+            else if (parameters.First.Type == JTokenType.String)
+            {
+
+            }
+        }
+
+        public override bool Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -325,7 +414,7 @@ namespace MapboxStyle.Expressions
 
             var stopArray = array.SkipInto(2);
 
-            for (var index = 0; index < stopArray.Count; index++)
+            for (var index = 0; index < stopArray.Count / 2; index++)
             {
                 var stopOffset = stopArray[index * 2].ToObject<double>();
                 var stopValueToken = stopArray[index * 2 + 1];

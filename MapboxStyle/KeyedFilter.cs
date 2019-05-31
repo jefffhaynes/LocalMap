@@ -11,7 +11,7 @@ namespace MapboxStyle
             _key = key;
         }
 
-        public override bool Evaluate(FilterType featureType, string featureId,
+        public override bool Evaluate(FilterType featureType, string featureId, double zoom,
             IDictionary<string, string> featureProperties)
         {
             if (_key == "$type")
