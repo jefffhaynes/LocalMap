@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace MapboxStyle
 {
-    public abstract class Function<T> : IExpression<T>
+    public abstract class Function<T> : Expression
     {
         private readonly IDictionary<double, T> _stops;
         private readonly double _base;
@@ -23,7 +23,7 @@ namespace MapboxStyle
             _isConst = true;
         }
 
-        public T Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
         {
             if (_isConst)
             {

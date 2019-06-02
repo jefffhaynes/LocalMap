@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Drawing;
 using Newtonsoft.Json;
 
 namespace MapboxStyle
@@ -9,25 +10,25 @@ namespace MapboxStyle
         public Visibility Visibility { get; set; }
 
         [JsonProperty("background-color")]
-        public ColorFunction BackgroundColor { get; set; }
+        public Expression BackgroundColor { get; set; }
 
         [JsonProperty("background-pattern")]
         public string BackgroundPattern { get; set; }
 
         [JsonProperty("background-opacity")]
-        public IExpression<double> BackgroundOpacity { get; set; }
+        public Expression BackgroundOpacity { get; set; }
 
         [JsonProperty("fill-antialias")]
         public bool? FillAntialias { get; set; }
 
         [JsonProperty("fill-opacity")]
-        public IExpression<double> FillOpacity { get; set; }
+        public Expression FillOpacity { get; set; }
 
         [JsonProperty("fill-color")]
-        public ColorFunction FillColor { get; set; }
+        public Expression FillColor { get; set; }
 
         [JsonProperty("fill-outline-color")]
-        public ColorFunction FillOutlineColor { get; set; }
+        public Expression FillOutlineColor { get; set; }
 
         [JsonProperty("fill-translate")]
         public List<double> FillTranslate { get; set; }
@@ -36,48 +37,48 @@ namespace MapboxStyle
         public string FillPattern { get; set; }
 
         [JsonProperty("line-miter-limit")]
-        public IExpression<double> LineMiterLimit { get; set; }
+        public Expression LineMiterLimit { get; set; }
 
         [JsonProperty("line-round-limit")]
-        public IExpression<double> LineRoundLimit { get; set; }
+        public Expression LineRoundLimit { get; set; }
 
         [JsonProperty("line-opacity")]
-        public IExpression<double> LineOpacity { get; set; }
+        public Expression LineOpacity { get; set; }
 
         [JsonProperty("line-color")]
-        public ColorFunction LineColor { get; set; }
+        public Expression LineColor { get; set; }
 
         [JsonProperty("line-translate")]
         public List<double> LineTranslate { get; set; }
 
         [JsonProperty("line-width")]
-        public IExpression<double> LineWidth { get; set; }
+        public Expression LineWidth { get; set; }
 
         [JsonProperty("line-gap-width")]
-        public IExpression<double> LineGapWidth { get; set; }
+        public Expression LineGapWidth { get; set; }
 
         [JsonProperty("line-offset")]
-        public IExpression<double> LineOffset { get; set; }
+        public Expression LineOffset { get; set; }
 
         [JsonProperty("line-blur")]
-        public IExpression<double> LineBlur { get; set; }
+        public Expression LineBlur { get; set; }
 
         [JsonProperty("line-dasharray")]
-        public List<float> LineDashArray { get; set; }
+        public Expression LineDashArray { get; set; }
 
         [JsonProperty("line-pattern")]
         public string LinePattern { get; set; }
 
         [JsonProperty("text-color")]
-        public ColorFunction TextColor { get; set; }
+        public Expression TextColor { get; set; }
 
         [JsonProperty("text-halo-blur")]
-        public IExpression<double> TextHaloBlur { get; set; }
+        public Expression TextHaloBlur { get; set; }
 
         [JsonProperty("text-halo-color")]
-        public ColorFunction TextHaloColor { get; set; }
+        public Expression TextHaloColor { get; set; }
 
         [JsonProperty("text-halo-width")]
-        public IExpression<double> TextHaloWidth { get; set; }
+        public Expression TextHaloWidth { get; set; }
     }
 }

@@ -29,6 +29,6 @@ namespace MapboxStyle
         public Layout Layout { get; set; }
 
         [JsonProperty("filter")]
-        public IExpression<bool> Filter { get; set; }
+        public Expression Filter { get; set; }
     }
 }

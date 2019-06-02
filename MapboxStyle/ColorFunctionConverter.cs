@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -42,7 +43,8 @@ namespace MapboxStyle
 
         public override bool CanConvert(Type objectType)
         {
-            return objectType == typeof(ColorFunction);
+            return false;
+            //return objectType == typeof(TypedExpression<Color>);
         }
     }
 }

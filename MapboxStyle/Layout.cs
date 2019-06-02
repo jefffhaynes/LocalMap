@@ -6,25 +6,25 @@ namespace MapboxStyle
     public class Layout
     {
         [JsonProperty("text-field")]
-        public string TextField { get; set; }
+        public Expression TextField { get; set; }
 
         [JsonProperty("text-font")]
-        public List<string> TextFont { get; set; }
+        public Expression TextFont { get; set; }
 
         [JsonProperty("text-size")]
-        public DoubleFunction TextSize { get; set; }
+        public Expression TextSize { get; set; }
 
         [JsonProperty("text-anchor")]
         public TextAnchor? TextAnchor { get; set; }
 
         [JsonProperty("text-padding")]
-        public DoubleFunction TextPadding { get; set; }
+        public Expression TextPadding { get; set; }
 
         [JsonProperty("text-transform")]
         public TextTransform? TextTransform { get; set; }
 
         [JsonProperty("max-text-width")]
-        public DoubleFunction MaximumTextWidth { get; set; }
+        public Expression MaximumTextWidth { get; set; }
 
         [JsonProperty("line-cap")]
         public LineCap? LineCap { get; set; }
@@ -36,6 +36,6 @@ namespace MapboxStyle
         public SymbolPlacement SymbolPlacement { get; set; }
 
         [JsonProperty("symbol-spacing")]
-        public DoubleFunction SymbolSpacing { get; set; }
+        public Expression SymbolSpacing { get; set; }
     }
 }

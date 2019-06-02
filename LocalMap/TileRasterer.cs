@@ -97,11 +97,16 @@ namespace LocalMap
             var zoom = tile.ZoomLevel;
 
             var activeLayers = styleLayers.Where(styleLayer => styleLayer.Filter == null ||
-                                                               styleLayer.Filter.Evaluate(filterType.Value, feature.Id,zoom,
+                                                               styleLayer.Filter.GetBool(filterType.Value, feature.Id,zoom,
                                                                    attributes)).ToList();
 
 
             var activeLayer = activeLayers.FirstOrDefault();
+
+            if (activeLayer?.Id == "water")
+            {
+                return;
+            }
 
             if (activeLayer == null && feature.GeometryType != VectorTile.Tile.Types.GeomType.Point)
             {
@@ -109,13 +114,13 @@ namespace LocalMap
             }
 
             var paint = activeLayer?.Paint;
-            var color = paint?.FillColor?.Evaluate(filterType.Value, feature.Id, zoom, attributes);
+            var color = paint?.FillColor?.GetColor(filterType.Value, feature.Id, zoom, attributes);
             var fillColor = Convert(color) ?? Colors.Black;
-            color = paint?.LineColor?.Evaluate(filterType.Value, feature.Id, zoom, attributes);
+            color = paint?.LineColor?.GetColor(filterType.Value, feature.Id, zoom, attributes);
 
             if (paint?.FillOpacity != null)
             {
-                var fillOpacity = paint.FillOpacity.Evaluate(filterType.Value, feature.Id, zoom, attributes);
+                var fillOpacity = paint.FillOpacity.GetDouble(filterType.Value, feature.Id, zoom, attributes);
                 fillColor.A = (byte) (fillOpacity * byte.MaxValue);
             }
 
@@ -123,15 +128,15 @@ namespace LocalMap
 
             if (paint?.LineOpacity != null)
             {
-                var lineOpacity = paint.LineOpacity.Evaluate(filterType.Value, feature.Id, zoom, attributes);
+                var lineOpacity = paint.LineOpacity.GetDouble(filterType.Value, feature.Id, zoom, attributes);
                 lineColor.A = (byte) (lineOpacity * byte.MaxValue);
             }
 
-            color = paint?.TextColor?.Evaluate(filterType.Value, feature.Id, zoom, attributes);
+            color = paint?.TextColor?.GetColor(filterType.Value, feature.Id, zoom, attributes);
             var lineWidth = (float?) paint?.LineWidth?.Evaluate(filterType.Value, feature.Id, zoom, attributes) ?? 1.0f;
             var textColor = Convert(color) ?? Colors.Black;
 
-            color = paint?.TextHaloColor?.Evaluate(filterType.Value, feature.Id, zoom, attributes);
+            color = paint?.TextHaloColor?.GetColor(filterType.Value, feature.Id, zoom, attributes);
             var textHaloColor = Convert(color);
             var textHaloWidth = (float?) paint?.TextHaloWidth?.Evaluate(filterType.Value, feature.Id, zoom, attributes) ?? 0.0f;
 
@@ -139,8 +144,8 @@ namespace LocalMap
             var fontSize = (float?) layout?.TextSize?.Evaluate(filterType.Value, feature.Id, zoom, attributes) ?? 16.0f;
             fontSize *= TileSize / 256;
 
-            var fontFamily = layout?.TextFont?.FirstOrDefault();
-            var textPadding = layout?.TextPadding?.Evaluate(filterType.Value, feature.Id, zoom, attributes) ?? 2.0;
+            var fontFamily = layout?.TextFont?.GetString(filterType.Value, feature.Id, zoom, attributes);
+            var textPadding = layout?.TextPadding?.GetDouble(filterType.Value, feature.Id, zoom, attributes) ?? 2.0;
 
             if (attributes.TryGetValue("name", out var name))
             {
@@ -201,7 +206,11 @@ namespace LocalMap
                             {
                                 if (paint?.LineDashArray != null)
                                 {
-                                    strokeStyle.CustomDashStyle = paint.LineDashArray.Select(a => a / scale).ToArray();
+                                    var dashArray = paint.LineDashArray.GetArray(filterType.Value, feature.Id, zoom,
+                                        attributes);
+
+                                    strokeStyle.CustomDashStyle = dashArray.Cast<float>().Select(a => a / scale)
+                                        .ToArray();
                                 }
 
                                 if (layout?.LineCap != null)
@@ -217,7 +226,7 @@ namespace LocalMap
                                 if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
                                 {
                                     session.FillGeometry(geometry, fillColor);
-                                    var fillOutlineColor = Convert(paint?.FillOutlineColor?.Evaluate(filterType.Value, feature.Id, zoom, attributes));
+                                    var fillOutlineColor = Convert(paint?.FillOutlineColor?.GetColor(filterType.Value, feature.Id, zoom, attributes));
 
                                     if (fillOutlineColor != null)
                                     {

@@ -9,9 +9,9 @@ namespace MapboxStyle
         public static Style Deserialize(Stream stream)
         {
             var settings = new JsonSerializerSettings();
-            settings.Converters.Add(new ColorFunctionConverter());
-            settings.Converters.Add(new DoubleFunctionConverter());
-            settings.Converters.Add(new FilterConverter());
+            //settings.Converters.Add(new ColorFunctionConverter());
+            settings.Converters.Add(new ExpressionConverter());
+            //settings.Converters.Add(new FilterConverter());
 
             var reader = new StreamReader(stream);
             var jsonReader = new JsonTextReader(reader);

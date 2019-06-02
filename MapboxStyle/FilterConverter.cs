@@ -20,8 +20,7 @@ namespace MapboxStyle
 
             //try
             {
-                var factory = new BoolExpressionFactory();
-                return factory.GetExpression(array);
+                return ExpressionFactory.GetExpression(array);
             }
             //catch
             {
@@ -32,7 +31,7 @@ namespace MapboxStyle
 
         public override bool CanConvert(Type objectType)
         {
-            return objectType == typeof(IExpression<bool>);
+            return objectType == typeof(Filter);
         }
 
         private static Filter GetFilter(JArray array)

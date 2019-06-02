@@ -2,8 +2,7 @@
 
 namespace MapboxStyle
 {
-    public abstract class Filter : IExpression<bool>
+    public abstract class Filter : Expression
     {
-        public abstract bool Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties);
     }
 }

@@ -19,7 +19,7 @@ namespace MapboxStyle
         public IEnumerable<Layer> GetLayers(string sourceLayer, double zoom)
         {
             return Layers.Where(layer => layer.SourceLayer != null &&
-                                         layer.SourceLayer.Equals(sourceLayer, StringComparison.CurrentCultureIgnoreCase) &&
+                                         //layer.SourceLayer.Equals(sourceLayer, StringComparison.CurrentCultureIgnoreCase) &&
                                          (layer.MinimumZoom == null || layer.MinimumZoom < zoom) &&
                                          (layer.MaximumZoom == null || layer.MaximumZoom > zoom));
         }

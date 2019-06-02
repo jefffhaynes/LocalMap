@@ -9,9 +9,9 @@ namespace MapboxStyle
         {
         }
 
-        public override bool Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
         {
-            return Filters.All(filter => !filter.Evaluate(featureType, featureId, zoom, featureProperties));
+            return Filters.All(filter => !(bool)filter.Evaluate(featureType, featureId, zoom, featureProperties));
         }
     }
 }

@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 
 namespace MapboxStyle
 {
-    class DoubleFunctionConverter : JsonConverter
+    class ExpressionConverter : JsonConverter
     {
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
@@ -23,24 +23,21 @@ namespace MapboxStyle
                 {
                     // expression
                     var array = JArray.Load(reader);
-                    var factory = new NumericExpressionFactory();
-                    return factory.GetExpression(array);
+                    return ExpressionFactory.GetExpression(array);
                 }
-                else
+
+                // function
+                var item = JObject.Load(reader);
+                var stopItems = item["stops"];
+
+                var stops = stopItems.ToDictionary(pair => (double) pair.First, pair => (double) pair.Last);
+
+                if (item.TryGetValue("base", StringComparison.CurrentCultureIgnoreCase, out var baseValue))
                 {
-                    // function
-                    var item = JObject.Load(reader);
-                    var stopItems = item["stops"];
-
-                    var stops = stopItems.ToDictionary(pair => (double) pair.First, pair => (double) pair.Last);
-
-                    if (item.TryGetValue("base", StringComparison.CurrentCultureIgnoreCase, out var baseValue))
-                    {
-                        return new DoubleFunction(stops, (double) baseValue);
-                    }
-
-                    return new DoubleFunction(stops);
+                    return new DoubleFunction(stops, (double) baseValue);
                 }
+
+                return new DoubleFunction(stops);
             }
 
             if (value is double d)
@@ -58,12 +55,24 @@ namespace MapboxStyle
                 return new DoubleFunction(l);
             }
 
+            if (value is string s)
+            {
+                try
+                {
+                    return new ColorFunction(s.ParseHtmlColor());
+                }
+                catch (Exception)
+                {
+                    return s;
+                }
+            }
+
             throw new NotSupportedException();
         }
 
         public override bool CanConvert(Type objectType)
         {
-            return objectType == typeof(IExpression<double>);
+            return objectType == typeof(Expression);
         }
     }
 }

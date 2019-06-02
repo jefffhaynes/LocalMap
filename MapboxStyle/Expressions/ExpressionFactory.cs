@@ -1,71 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.Serialization;
-using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 
 namespace MapboxStyle.Expressions
 {
-    public class NumericExpressionFactory : ExpressionFactory<double>
-    {
-        protected override Expression<double> GetExpression(ExpressionOperator op, JArray parameters)
-        {
-            switch (op)
-            {
-                case ExpressionOperator.Zoom:
-                    return new ZoomExpression();
-                case ExpressionOperator.Interpolate:
-                    return new NumericInterpolateExpression(parameters);
-            }
-
-            return base.GetExpression(op, parameters);
-        }
-    }
-
-    public class BoolExpressionFactory : ExpressionFactory<bool>
-    {
-        protected override Expression<bool> GetExpression(ExpressionOperator op, JArray parameters)
-        {
-            switch (op)
-            {
-                case ExpressionOperator.Match:
-                    return new MatchExpression(parameters);
-                case ExpressionOperator.Equal:
-                    return new EqualExpression(parameters);
-            }
-            return base.GetExpression(op, parameters);
-        }
-    }
-
-    public class EqualExpression : Expression<bool>
-    {
-        public EqualExpression(JArray parameters)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override bool Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public class StringExpressionFactory : ExpressionFactory<string>
-    {
-        protected override Expression<string> GetExpression(ExpressionOperator op, JArray parameters)
-        {
-            switch (op)
-            {
-                case ExpressionOperator.Get:
-                    return new GetExpression(parameters);
-            }
-            return base.GetExpression(op, parameters);
-        }
-    }
-
-    public class GetExpression : Expression<string>
+    public class GetExpression : Expression
     {
         public GetExpression(JArray parameters)
         {
@@ -74,23 +17,45 @@ namespace MapboxStyle.Expressions
 
         public string ParameterName { get; }
 
-        public override string Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
         {
-            return featureProperties[ParameterName];
+            if (featureProperties.TryGetValue(ParameterName, out var value))
+            {
+                return value;
+            }
+
+            return null;
         }
     }
 
 
-    public class ExpressionFactory<T>
+    public static class ExpressionFactory
     {
-        public Expression<T> GetExpression(JArray array)
+        public static Expression GetExpression(JToken token)
         {
-            var op = array.First.ToObject<ExpressionOperator>();
-            var parameters = array.SkipInto();
-            return GetExpression(op, parameters);
+            if (token is JArray array)
+            {
+                if (array.First.Type == JTokenType.String)
+                {
+                    try
+                    {
+                        var op = array.First.ToObject<ExpressionOperator>();
+                        var parameters = array.SkipInto();
+                        return GetExpression(op, parameters);
+                    }
+                    catch
+                    {
+                        return new ConstantExpression(array.ToArray());
+                    }
+                }
+
+                return new ConstantExpression(array.ToArray());
+            }
+
+            return new ConstantExpression(token.ToObject<object>());
         }
 
-        protected virtual Expression<T> GetExpression(ExpressionOperator op, JArray parameters)
+        private static Expression GetExpression(ExpressionOperator op, JArray parameters)
         { 
             switch (op)
             {
@@ -103,7 +68,7 @@ namespace MapboxStyle.Expressions
                 case ExpressionOperator.Format:
                     break;
                 case ExpressionOperator.Literal:
-                    break;
+                    return new LiteralExpression(parameters);
                 case ExpressionOperator.Number:
                     break;
                 case ExpressionOperator.NumberFormat:
@@ -127,7 +92,7 @@ namespace MapboxStyle.Expressions
                 case ExpressionOperator.FeatureState:
                     break;
                 case ExpressionOperator.GeometryType:
-                    break;
+                    return new GeometryTypeExpression();
                 case ExpressionOperator.Id:
                     break;
                 case ExpressionOperator.LineProgress:
@@ -137,7 +102,7 @@ namespace MapboxStyle.Expressions
                 case ExpressionOperator.At:
                     break;
                 case ExpressionOperator.Get:
-                    break;
+                    return new GetExpression(parameters);
                 case ExpressionOperator.Has:
                     break;
                 case ExpressionOperator.Length:
@@ -145,33 +110,35 @@ namespace MapboxStyle.Expressions
                 case ExpressionOperator.Not:
                     break;
                 case ExpressionOperator.Equal:
-                    break;
+                    return new EqualExpression(parameters);
                 case ExpressionOperator.NotEqual:
-                    break;
+                    return new NotEqualExpression(parameters);
                 case ExpressionOperator.GreaterThan:
-                    break;
+                    return new GreaterThanExpression(parameters);
                 case ExpressionOperator.GreaterThanOrEqual:
-                    break;
+                    return new GreaterThanOrEqualExpression(parameters);
                 case ExpressionOperator.LessThan:
-                    break;
+                    return new LessThanExpression(parameters);
                 case ExpressionOperator.LessThanOrEqual:
-                    break;
+                    return new LessThanOrEqualExpression(parameters);
                 case ExpressionOperator.All:
-                    break;
+                    return new AllExpression(parameters);
                 case ExpressionOperator.Any:
                     break;
                 case ExpressionOperator.Case:
                     break;
                 case ExpressionOperator.Coalesce:
-                    break;
+                    return new CoalesceExpression(parameters);
                 case ExpressionOperator.Match:
-                    break;
+                    return new MatchExpression(parameters);
+                case ExpressionOperator.Interpolate:
+                    return new InterpolateExpression(parameters);
                 case ExpressionOperator.InterpolateHcl:
                     break;
                 case ExpressionOperator.InterpolateLab:
                     break;
                 case ExpressionOperator.Step:
-                    break;
+                    return new StepExpression(parameters);
                 case ExpressionOperator.Let:
                     break;
                 case ExpressionOperator.Var:
@@ -244,15 +211,246 @@ namespace MapboxStyle.Expressions
                     break;
                 case ExpressionOperator.HeatmapDensity:
                     break;
+                case ExpressionOperator.Zoom:
+                    return new ZoomExpression();
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(op), op, null);
             }
 
             throw new NotSupportedException();
         }
     }
 
-    public class ZoomExpression : NumericExpression
+    internal class CoalesceExpression : Expression
     {
-        public override double Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        private readonly List<Expression> _expressions;
+
+        public CoalesceExpression(JArray parameters)
+        {
+            _expressions = parameters.Select(ExpressionFactory.GetExpression).ToList();
+        }
+
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal class StepExpression : Expression
+    {
+        private readonly Expression _inputExpression;
+        private readonly Expression _baseOutput;
+        private readonly List<Stop> _stops = new List<Stop>();
+
+        public StepExpression(JArray parameters)
+        {
+            _inputExpression = ExpressionFactory.GetExpression(parameters.First);
+            _baseOutput = ExpressionFactory.GetExpression(parameters.SkipInto().First);
+            var stops = parameters.SkipInto(2);
+
+            for (var index = 0; index < stops.Count / 2; index++)
+            {
+                var stopOffset = stops[index * 2].ToObject<double>();
+                var stopValueToken = stops[index * 2 + 1];
+
+                var stopExpression = ExpressionFactory.GetExpression(stopValueToken);
+                _stops.Add(new Stop(stopOffset, stopExpression));
+            }
+        }
+
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal class LiteralExpression : Expression
+    {
+        private readonly object _value;
+
+        public LiteralExpression(JArray parameters)
+        {
+            var value = parameters.First;
+            switch (value.Type)
+            {
+                case JTokenType.Array:
+                    _value = value.ToArray();
+                    break;
+                case JTokenType.String:
+                    _value = value.ToString();
+                    break;
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal class NotEqualExpression : EqualExpression
+    {
+        public NotEqualExpression(JArray parameters) : base(parameters)
+        {
+        }
+
+        protected override bool Compare(object lhs, object rhs)
+        {
+            return !base.Compare(lhs, rhs);
+        }
+    }
+
+    internal class GreaterThanExpression : NumericalComparisonExpression
+    {
+        public GreaterThanExpression(JArray parameters) : base(parameters)
+        {
+        }
+
+        protected override bool Compare(double lhs, double rhs)
+        {
+            return lhs > rhs;
+        }
+    }
+
+    internal class GreaterThanOrEqualExpression : NumericalComparisonExpression
+    {
+        public GreaterThanOrEqualExpression(JArray parameters) : base(parameters)
+        {
+        }
+
+        protected override bool Compare(double lhs, double rhs)
+        {
+            return lhs >= rhs;
+        }
+    }
+
+    internal class LessThanOrEqualExpression : NumericalComparisonExpression
+    {
+        public LessThanOrEqualExpression(JArray parameters) : base(parameters)
+        {
+        }
+
+        protected override bool Compare(double lhs, double rhs)
+        {
+            return lhs <= rhs;
+        }
+    }
+
+
+    internal class LessThanExpression : NumericalComparisonExpression
+    {
+        public LessThanExpression(JArray parameters) : base(parameters)
+        {
+        }
+
+        protected override bool Compare(double lhs, double rhs)
+        {
+            return lhs < rhs;
+        }
+    }
+
+    internal class GeometryTypeExpression : Expression
+    {
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        {
+            return featureType;
+        }
+    }
+
+    internal class AllExpression : Expression
+    {
+        private readonly List<Expression> _expressions;
+
+        public AllExpression(JArray parameters)
+        {
+            _expressions = parameters.Select(ExpressionFactory.GetExpression).ToList();
+        }
+
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        {
+            if (_expressions.Count == 0)
+            {
+                return true;
+            }
+
+            return _expressions.All(expression =>
+                expression.GetBool(featureType, featureId, zoom, featureProperties));
+        }
+    }
+
+    public abstract class NumericalComparisonExpression : ComparisonExpression
+    {
+        protected NumericalComparisonExpression(JArray parameters) : base(parameters)
+        {
+        }
+
+        protected override bool Compare(object lhs, object rhs)
+        {
+            if (lhs == null || rhs == null)
+            {
+                return false;
+            }
+
+            if (double.TryParse(lhs.ToString(), out var lhsd) && double.TryParse(rhs.ToString(), out var rhsd))
+            {
+                return Compare(lhsd, rhsd);
+            }
+
+            return false;
+        }
+
+        protected abstract bool Compare(double lhs, double rhs);
+    }
+
+    public abstract class ComparisonExpression : Expression
+    {
+        private readonly Expression _leftExpression;
+        private readonly Expression _rightExpression;
+
+        protected ComparisonExpression(JArray parameters)
+        {
+            _leftExpression = ExpressionFactory.GetExpression(parameters.First);
+            _rightExpression = ExpressionFactory.GetExpression(parameters.Last);
+        }
+
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        {
+            var lhs = _leftExpression.Evaluate(featureType, featureId, zoom, featureProperties);
+            var rhs = _rightExpression.Evaluate(featureType, featureId, zoom, featureProperties);
+
+            return Compare(lhs, rhs);
+        }
+
+        protected abstract bool Compare(object lhs, object rhs);
+    }
+
+    public class EqualExpression : ComparisonExpression
+    {
+        public EqualExpression(JArray parameters) : base(parameters)
+        {
+        }
+
+        protected override bool Compare(object lhs, object rhs)
+        {
+            if (lhs == null && rhs == null)
+            {
+                return true;
+            }
+
+            if (lhs == null || rhs == null)
+            {
+                return false;
+            }
+
+            return lhs.ToString() == rhs.ToString();
+        }
+    }
+
+    public class ZoomExpression : Expression
+    {
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
         {
             return zoom;
         }
@@ -294,33 +492,9 @@ namespace MapboxStyle.Expressions
         }
     }
 
-    public class NumericInterpolateExpression : InterpolateExpression<double>
+    public class Stop
     {
-        public NumericInterpolateExpression(JArray array) : base(array)
-        {
-        }
-
-        protected override Expression<double> GetStopExpression(JToken token)
-        {
-            if (token is JArray array)
-            {
-                var factory = new NumericExpressionFactory();
-                return factory.GetExpression(array);
-            }
-
-            var value = token.ToObject<double>();
-            return new ConstantNumericExpression(value);
-        }
-
-        public override double Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public class InterpolationStop<T>
-    {
-        public InterpolationStop(double offset, Expression<T> expression)
+        public Stop(double offset, Expression expression)
         {
             Offset = offset;
             Expression = expression;
@@ -328,65 +502,61 @@ namespace MapboxStyle.Expressions
 
         public double Offset { get; }
 
-        public Expression<T> Expression { get; }
+        public Expression Expression { get; }
     }
 
-    public class ConstantNumericExpression : NumericExpression
+    public class ConstantExpression : Expression
     {
-        public ConstantNumericExpression(double value)
+        public ConstantExpression(object value)
         {
             Value = value;
         }
 
-        public double Value { get; }
+        public object Value { get; }
 
-        public override double Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
         {
             return Value;
         }
     }
 
-    public class MatchExpression : Expression<bool>
+    public class MatchExpression : Expression
     {
+        private readonly Expression _matchingExpression;
+        private readonly JArray _matchingArray;
+
         public MatchExpression(JArray parameters)
         {
-            var matchArray = (JArray) parameters.SkipInto().First;
-
-            if (parameters.First is JArray expressionArray)
-            {
-                // expression
-
-                // see what we're matching against
-                var firstItem = matchArray[0];
-                var type = firstItem.Type;
-
-                if (type == JTokenType.String)
-                {
-                    var factory = new StringExpressionFactory();
-                    var expression = factory.GetExpression(expressionArray);
-                }
-            }
-            else if (parameters.First.Type == JTokenType.String)
-            {
-
-            }
+            _matchingExpression = ExpressionFactory.GetExpression(parameters.First);
+            _matchingArray = parameters.SkipInto();
         }
 
-        public override bool Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
         {
-            throw new NotImplementedException();
+            var matchValue = _matchingExpression.Evaluate(featureType, featureId, zoom, featureProperties);
+            foreach (var item in _matchingArray)
+            {
+                if (item == matchValue)
+                {
+                    return item;
+                }
+
+                return null;
+            }
+
+            return null;
         }
     }
 
-    public abstract class InterpolateExpression<T> : Expression<T>
+    public class InterpolateExpression : Expression
     {
         public EasingFunction EasingFunction { get; }
 
-        public Expression<double> InputExpression { get; }
+        public Expression InputExpression { get; }
 
-        public List<InterpolationStop<T>> Stops { get; } = new List<InterpolationStop<T>>();
+        public List<Stop> Stops { get; } = new List<Stop>();
 
-        protected InterpolateExpression(JArray array)
+        public InterpolateExpression(JArray array)
         {
             var interpolationFunctionValues = (JArray) array.First;
             var easingMode = interpolationFunctionValues.First.ToObject<EasingMode>();
@@ -394,8 +564,7 @@ namespace MapboxStyle.Expressions
 
             var input = (JArray) array.First.Next;
             
-            var inputExpressionFactory = new NumericExpressionFactory();
-            InputExpression = inputExpressionFactory.GetExpression(input);
+            InputExpression = ExpressionFactory.GetExpression(input);
 
             switch (easingMode)
             {
@@ -419,12 +588,15 @@ namespace MapboxStyle.Expressions
                 var stopOffset = stopArray[index * 2].ToObject<double>();
                 var stopValueToken = stopArray[index * 2 + 1];
 
-                Expression<T> stopExpression = GetStopExpression(stopValueToken);
+                var stopExpression = ExpressionFactory.GetExpression(stopValueToken);
 
-                Stops.Add(new InterpolationStop<T>(stopOffset, stopExpression));
+                Stops.Add(new Stop(stopOffset, stopExpression));
             }
         }
 
-        protected abstract Expression<T> GetStopExpression(JToken token);
+        public override object Evaluate(FilterType featureType, string featureId, double zoom, IDictionary<string, string> featureProperties)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
