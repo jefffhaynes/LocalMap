@@ -24,9 +24,9 @@ namespace MapboxStyle
                                          (layer.MaximumZoom == null || layer.MaximumZoom > zoom));
         }
 
-        public Layer Background
+        public Layer GetBackground(double zoom)
         {
-            get { return Layers.FirstOrDefault(layer => layer.Type == LayerType.Background); }
+            return Layers.FirstOrDefault(layer => EnumHelper<LayerType>.Parse(layer.Type.GetValue(zoom)) == LayerType.Background);
         }
     }
 }

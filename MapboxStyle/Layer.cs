@@ -14,7 +14,7 @@ namespace MapboxStyle
         public string SourceLayer { get; set; }
 
         [JsonProperty("type")]
-        public LayerType Type { get; set; }
+        public StringFunction Type { get; set; }
 
         [JsonProperty("minzoom")]
         public double? MinimumZoom { get; set; }

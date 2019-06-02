@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Storage.Streams;
@@ -19,36 +17,35 @@ namespace LocalMap
 {
     public static class TileRasterer
     {
-        const float TileSize = 512;
-
         private static readonly MemoryCache Cache = new MemoryCache(new MemoryCacheOptions());
 
         public static async Task<IRandomAccessStream> RasterAsync(Tile tile, List<VectorTileLayer> layers, Style style)
         {
             var imageKey = tile;
 
+            int tileSize = 512;
+
             if (!Cache.TryGetValue(imageKey, out InMemoryRandomAccessStream stream))
             {
                 using (var canvasDevice = new CanvasDevice())
                 {
-                    using (var canvasRenderTarget = new CanvasRenderTarget(canvasDevice, TileSize, TileSize, 96))
+                    using (var canvasRenderTarget = new CanvasRenderTarget(canvasDevice, tileSize, tileSize, 96))
                     {
                         using (var session = canvasRenderTarget.CreateDrawingSession())
                         {
                             session.Antialiasing = CanvasAntialiasing.Antialiased;
-                            session.TextAntialiasing = CanvasTextAntialiasing.ClearType;
 
-                            var background = Convert(style.Background?.Paint?.BackgroundColor?.GetValue(0));
+                            var background = Convert(style.GetBackground(0)?.Paint?.BackgroundColor?.GetValue(0));
 
                             if (background != null)
                             {
-                                session.FillRectangle(new Rect(0, 0, TileSize, TileSize), background.Value);
+                                session.FillRectangle(new Rect(0, 0, tileSize, tileSize), background.Value);
                             }
 
-                            List<Rect> boxes = new List<Rect>();
+                            var collisionBoxes = new List<Polygon>();
                             foreach (var layer in layers)
                             {
-                                RasterLayer(session, canvasRenderTarget, tile, layer, style, TileSize, boxes);
+                                RasterLayer(session, canvasRenderTarget, tile, layer, style, tileSize, collisionBoxes);
                             }
                         }
 
@@ -65,25 +62,25 @@ namespace LocalMap
         }
 
         private static void RasterLayer(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget, Tile tile,
-            VectorTileLayer layer, Style style, float size, List<Rect> boxes)
+            VectorTileLayer layer, Style style, int tileSize, List<Polygon> collisionBoxes)
         {
             var styleLayers = style.GetLayers(layer.Name, tile.ZoomLevel).ToList();
 
-            var scale = size / layer.Extent;
+            var scale = (float) tileSize / layer.Extent;
 
-            List<string> names = new List<string>();
+            var names = new List<string>();
             foreach (var feature in layer.VectorTileFeatures)
             {
-                RasterFeature(session, canvasRenderTarget, tile, feature, styleLayers, scale, boxes,names);
+                RasterFeature(session, canvasRenderTarget, tile, feature, styleLayers, scale, tileSize, collisionBoxes, names);
             }
         }
 
         private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
-            Tile tile, VectorTileFeature feature, IEnumerable<Layer> styleLayers, float scale,
-            List<Rect> collisionBoxes,
+            Tile tile, VectorTileFeature feature, IEnumerable<Layer> styleLayers, float scale, int tileSize,
+            List<Polygon> collisionBoxes,
             List<string> names)
         {
-            Dictionary<string, string> attributes =
+            var attributes =
                 feature.Attributes.ToDictionary(pair => pair.Key,
                     pair => pair.Value.ToString());
 
@@ -136,7 +133,7 @@ namespace LocalMap
 
             var layout = activeLayer?.Layout;
             var fontSize = (float?) layout?.TextSize?.GetValue(zoom) ?? 16.0f;
-            fontSize *= TileSize / 256;
+            fontSize *= (float) tileSize / 256;
 
             var fontFamily = layout?.TextFont?.FirstOrDefault();
             var textPadding = layout?.TextPadding?.GetValue(zoom) ?? 2.0;
@@ -163,11 +160,14 @@ namespace LocalMap
                     var point = feature.Geometry[0][0];
                     var anchor = point.ToVector2(scale);
 
-                    var textAnchor = layout?.TextAnchor ?? TextAnchor.Center;
+                    var textAnchor = layout?.TextAnchor == null
+                        ? TextAnchor.Center
+                        : EnumHelper<TextAnchor>.Parse(layout.TextAnchor.GetValue(zoom));
+
                     var maximumTextWidth = (float?) layout?.MaximumTextWidth?.GetValue(zoom) ?? 10.0f;
 
                     DrawLabel(session, name, anchor, fontSize, fontFamily, textColor, textAnchor, maximumTextWidth,
-                        textPadding, textHaloColor, textHaloWidth, collisionBoxes);
+                        textPadding, textHaloColor, textHaloWidth, tileSize, collisionBoxes);
                     break;
                 }
 
@@ -228,18 +228,23 @@ namespace LocalMap
                                 {
                                     session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
 
-
                                     // "ref" is used for motorways
                                     //attributes.TryGetValue("ref", out var refName);
 
                                     if (name != null && !names.Contains(name))
                                     {
-                                        using (var format = new CanvasTextFormat {FontSize = fontSize, FontFamily = fontFamily, WordWrapping = CanvasWordWrapping.NoWrap})
+                                        using (var format = new CanvasTextFormat
+                                            {FontSize = fontSize, WordWrapping = CanvasWordWrapping.NoWrap})
                                         {
+                                            if (fontFamily != null)
+                                            {
+                                                format.FontFamily = fontFamily;
+                                            }
+
                                             var line = feature.Geometry[0];
                                             var vectors = line.Select(p => p.ToVector2(scale)).ToList();
 
-                                            if (session.DrawTextOnSegments(name, vectors, textColor, format))
+                                            if (session.DrawTextOnSegments(name, vectors, textColor, format, collisionBoxes))
                                             {
                                                 names.Add(name);
                                             }
@@ -256,7 +261,7 @@ namespace LocalMap
 
         private static void DrawLabel(CanvasDrawingSession session, string name, Vector2 anchor, float fontSize,
             string fontFamily, Color textColor, TextAnchor textAnchor, float maximumTextWidth, double textPadding,
-            Color? textHaloColor, float textHaloWidth, List<Rect> collisionBoxes)
+            Color? textHaloColor, float textHaloWidth, int tileSize, List<Polygon> collisionBoxes)
         {
             if (name == null)
             {
@@ -315,24 +320,22 @@ namespace LocalMap
 
                     var collisionPoint = new Point(collisionX, collisionY);
                     var collisionSize = new Size(layoutBounds.Width, layoutBounds.Height);
-                    var collisionBox = new Rect(collisionPoint, collisionSize).Expand(textPadding);
+                    var collisionRect = new Rect(collisionPoint, collisionSize).Expand(textPadding);
+                    var collisionBox = new Polygon(collisionRect);
 
-                    var clippingRect = new Rect(0, 0, TileSize, TileSize);
-                    if (!clippingRect.Contains(collisionBox))
+                    var clippingRect = new Rect(0, 0, tileSize, tileSize);
+                    if (!clippingRect.Contains(collisionRect))
                     {
                         return;
                     }
 
-                    if (collisionBoxes.All(box =>
-                    {
-                        box.Intersect(collisionBox);
-                        return box.IsEmpty;
-                    }))
+                    if (collisionBoxes.All(box => !box.Intersects(collisionBox)))
                     {
                         if (textHaloColor != null)
                         {
                             var textGeometry = CanvasGeometry.CreateText(layout);
-                            session.DrawGeometry(textGeometry, collisionPoint.ToVector2(), textHaloColor.Value, textHaloWidth * 2);
+                            session.DrawGeometry(textGeometry, collisionPoint.ToVector2(), textHaloColor.Value,
+                                textHaloWidth * 2);
                         }
 
                         session.DrawTextLayout(layout, collisionPoint.ToVector2(), textColor);
@@ -343,7 +346,8 @@ namespace LocalMap
             }
         }
 
-        private static float GetWrappingWidth(CanvasDrawingSession session, string name, CanvasTextFormat format, float maxWidth)
+        private static float GetWrappingWidth(CanvasDrawingSession session, string name, CanvasTextFormat format,
+            float maxWidth)
         {
             var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var wordLengths = words.Select(word => Measure(session, word, format)).ToList();
@@ -378,7 +382,7 @@ namespace LocalMap
             }
 
             // add one b/c we need to make sure layout happens inside this
-            return Math.Max(maxRowWidth, rowWidth) + 1; 
+            return Math.Max(maxRowWidth, rowWidth) + 1;
         }
 
         private static float Measure(CanvasDrawingSession session, string value, CanvasTextFormat format)
@@ -389,7 +393,8 @@ namespace LocalMap
             }
         }
 
-        private static void Convert(TextAnchor textAnchor, out CanvasHorizontalAlignment horizontalAlignment, out CanvasVerticalAlignment verticalAlignment)
+        private static void Convert(TextAnchor textAnchor, out CanvasHorizontalAlignment horizontalAlignment,
+            out CanvasVerticalAlignment verticalAlignment)
         {
             switch (textAnchor)
             {

@@ -1,4 +1,5 @@
 ﻿using Windows.Foundation;
+using Windows.UI.Xaml.Documents;
 
 namespace LocalMap
 {
@@ -15,6 +16,12 @@ namespace LocalMap
                    r.Right > rectangle.Right &&
                    r.Top < rectangle.Top &&
                    r.Bottom > rectangle.Bottom;
+        }
+
+        public static bool Intersects(this Rect r, Rect rectangle)
+        {
+            r.Intersect(rectangle);
+            return !r.IsEmpty;
         }
     }
 }

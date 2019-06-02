@@ -15,7 +15,7 @@ namespace MapboxStyle
         public DoubleFunction TextSize { get; set; }
 
         [JsonProperty("text-anchor")]
-        public TextAnchor? TextAnchor { get; set; }
+        public StringFunction TextAnchor { get; set; }
 
         [JsonProperty("text-padding")]
         public DoubleFunction TextPadding { get; set; }

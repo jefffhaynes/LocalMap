@@ -127,6 +127,7 @@
     </Compile>
     <Compile Include="Models\DataModel.cs" />
     <Compile Include="Models\TileModel.cs" />
+    <Compile Include="Polygon.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RectExtensions.cs" />
     <Compile Include="Tile.cs" />

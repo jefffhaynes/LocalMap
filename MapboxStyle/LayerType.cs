@@ -1,34 +1,35 @@
-﻿using Newtonsoft.Json;
+﻿using System.Runtime.Serialization;
+using Newtonsoft.Json;
 
 namespace MapboxStyle
 {
     public enum LayerType
     {
-        [JsonProperty("background")]
+        [EnumMember(Value="background")]
         Background,
 
-        [JsonProperty("fill")]
+        [EnumMember(Value="fill")]
         Fill,
 
-        [JsonProperty("line")]
+        [EnumMember(Value="line")]
         Line,
 
-        [JsonProperty("symbol")]
+        [EnumMember(Value ="symbol")]
         Symbol,
 
-        [JsonProperty("raster")]
+        [EnumMember(Value = "raster")]
         Raster,
 
-        [JsonProperty("circle")]
+        [EnumMember(Value = "circle")]
         Circle,
 
-        [JsonProperty("fill-extrusion")]
+        [EnumMember(Value = "fill-extrusion")]
         FillExtrusion,
 
-        [JsonProperty("heatmap")]
+        [EnumMember(Value = "heatmap")]
         Heatmap,
 
-        [JsonProperty("hillshade")]
+        [EnumMember(Value = "hillshade")]
         Hillshade
     }
 }
