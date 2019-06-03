@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices.WindowsRuntime;
+using Windows.Devices.Geolocation;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
 using Windows.UI.Xaml;
@@ -23,22 +24,29 @@ namespace LocalMap
             Loaded += OnLoaded;
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             var dataSource =
                 new CustomMapTileDataSource();
             dataSource.BitmapRequested += DataSourceOnBitmapRequested;
-                //new HttpMapTileDataSource("http://192.168.99.100:32771/styles/klokantech-basic/{zoomlevel}/{x}/{y}.png");
 
-                var source = new MapTileSource(dataSource)
-                {
-                    Layer = MapTileLayer.BackgroundReplacement, TilePixelSize = 512
-                };
+            var source = new MapTileSource(dataSource)
+            {
+                Layer = MapTileLayer.BackgroundReplacement, TilePixelSize = 512
+            };
 
-                Map.Style = MapStyle.None;
-            Map.MapServiceToken = "hi";
+            Map.Style = MapStyle.None;
             Map.TileSources.Add(source);
+
+            await Geolocator.RequestAccessAsync();
+
+            var geo = new Geolocator();
+            var location = await geo.GetGeopositionAsync();
+
+            Map.Center = location.Coordinate.Point;
+            Map.ZoomLevel = 10;
         }
+
 
         private async void DataSourceOnBitmapRequested(CustomMapTileDataSource sender, MapTileBitmapRequestedEventArgs args)
         {
