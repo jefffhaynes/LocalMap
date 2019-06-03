@@ -2,7 +2,6 @@
     x:Class="LocalMap.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:LocalMap"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:maps="using:Windows.UI.Xaml.Controls.Maps"
@@ -10,6 +9,6 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid>
-        <maps:MapControl Name="Map"/>
+        <maps:MapControl Name="Map" MapServiceToken="6VMPKsHIHr1t92H3jCjT~OabqLhVSJO3cCtYtpnlXRA~AhaI5POrlZPYOMPYtAR4dQYFyM6Cub2JBPBV3T36u6fWCgkk4Tm_QhFwLWrQNIWf "/>
     </Grid>
 </Page>

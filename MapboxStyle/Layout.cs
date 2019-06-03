@@ -37,5 +37,8 @@ namespace MapboxStyle
 
         [JsonProperty("symbol-spacing")]
         public DoubleFunction SymbolSpacing { get; set; }
+
+        [JsonProperty("icon-image")]
+        public StringFunction IconImage { get; set; }
     }
 }

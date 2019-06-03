@@ -6,7 +6,6 @@ using Windows.Foundation;
 using Windows.UI;
 using Mapbox.Vector.Tile;
 using Microsoft.Graphics.Canvas;
-using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.Text;
 
 namespace LocalMap
@@ -18,13 +17,12 @@ namespace LocalMap
             return new Vector2(coordinate.X * scale, coordinate.Y * scale);
         }
 
-        public static bool DrawTextOnSegments(this CanvasDrawingSession session, string name, List<Vector2> vectors,
+        public static void DrawTextOnSegments(this CanvasDrawingSession session, string name, List<Vector2> vectors,
             Color textColor,
-            CanvasTextFormat format, List<Polygon> collisionBoxes, double maxRotation = Math.PI / 2)
+            CanvasTextFormat format, int tileSize, List<Polygon> collisionBoxes, double maxRotation = Math.PI / 2)
         {
             var start = vectors[0];
 
-            bool success = false;
             int charIndex = 0;
             var textCollisionBoxes = new List<Polygon>();
 
@@ -33,16 +31,14 @@ namespace LocalMap
                 foreach (var point in vectors.Skip(1))
                 {
                     if (DrawTextOnSegment(session, name, textColor, format, ref charIndex,
-                        ref start, point, collisionBoxes, out var collisionBox, maxRotation))
+                        ref start, point, tileSize, collisionBoxes, out var collisionBox, maxRotation))
                     {
                         textCollisionBoxes.Add(collisionBox);
-                        success = true;
                     }
                     else
                     {
-                        success = false;
                         session.Clear(Colors.Transparent);
-                        break;
+                        return;
                     }
 
                     if (charIndex >= name.Length)
@@ -52,17 +48,12 @@ namespace LocalMap
                 }
             }
 
-            if (success)
-            {
-                collisionBoxes.AddRange(textCollisionBoxes);
-            }
-
-            return success;
+            collisionBoxes.AddRange(textCollisionBoxes);
         }
 
         private static bool DrawTextOnSegment(CanvasDrawingSession session, string value, Color color,
             CanvasTextFormat format, ref int characterIndex,
-            ref Vector2 start, Vector2 end, List<Polygon> collisionBoxes, out Polygon collisionBox, double maxRotation)
+            ref Vector2 start, Vector2 end, int tileSize, List<Polygon> collisionBoxes, out Polygon collisionBox, double maxRotation)
         {
             float dx = end.X - start.X;
             float dy = end.Y - start.Y;
@@ -127,28 +118,19 @@ namespace LocalMap
                 var collision = new Polygon(rect).Transform(rotationTransform);
                 collisionBox = collision;
 
+                // reset transform
                 session.Transform = transform;
+
+                var tileBox = new Rect(0, 0, tileSize, tileSize);
+                if (!tileBox.Contains(collision))
+                {
+                    return false;
+                }
 
                 if (collisionBoxes.Any(b => b.Intersects(collision)))
                 {
                     return false;
                 }
-
-                //using (var pathBuilder = new CanvasPathBuilder(session))
-                //{
-                //    pathBuilder.BeginFigure(collisionBox.Points[0]);
-                //    foreach (var boxPoint in collisionBox.Points.Skip(1))
-                //    {
-                //        pathBuilder.AddLine(boxPoint);
-                //    }
-                //    pathBuilder.EndFigure(CanvasFigureLoop.Closed);
-
-                //    using (var geo = CanvasGeometry.CreatePath(pathBuilder))
-                //    {
-                //        session.DrawGeometry(geo,
-                //            collisionBoxes.Any(b => b.Intersects(collision)) ? Colors.Red : Colors.Purple);
-                //    }
-                //}
 
                 // Update characterIndex and start.
                 characterIndex = lastCharacterIndex + 1;

@@ -8,7 +8,6 @@ using Windows.Storage.Streams;
 using Windows.UI;
 using Mapbox.Vector.Tile;
 using MapboxStyle;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.Text;
@@ -17,44 +16,35 @@ namespace LocalMap
 {
     public static class TileRasterer
     {
-        private static readonly MemoryCache Cache = new MemoryCache(new MemoryCacheOptions());
-
         public static async Task<IRandomAccessStream> RasterAsync(Tile tile, List<VectorTileLayer> layers, Style style)
         {
-            var imageKey = tile;
-
             int tileSize = 512;
 
-            if (!Cache.TryGetValue(imageKey, out InMemoryRandomAccessStream stream))
+            var stream = new InMemoryRandomAccessStream();
+
+            using (var canvasDevice = new CanvasDevice())
             {
-                using (var canvasDevice = new CanvasDevice())
+                using (var canvasRenderTarget = new CanvasRenderTarget(canvasDevice, tileSize, tileSize, 96))
                 {
-                    using (var canvasRenderTarget = new CanvasRenderTarget(canvasDevice, tileSize, tileSize, 96))
+                    using (var session = canvasRenderTarget.CreateDrawingSession())
                     {
-                        using (var session = canvasRenderTarget.CreateDrawingSession())
+                        session.Antialiasing = CanvasAntialiasing.Antialiased;
+
+                        var background = Convert(style.GetBackground(0)?.Paint?.BackgroundColor?.GetValue(0));
+
+                        if (background != null)
                         {
-                            session.Antialiasing = CanvasAntialiasing.Antialiased;
-
-                            var background = Convert(style.GetBackground(0)?.Paint?.BackgroundColor?.GetValue(0));
-
-                            if (background != null)
-                            {
-                                session.FillRectangle(new Rect(0, 0, tileSize, tileSize), background.Value);
-                            }
-
-                            var collisionBoxes = new List<Polygon>();
-                            foreach (var layer in layers)
-                            {
-                                RasterLayer(session, canvasRenderTarget, tile, layer, style, tileSize, collisionBoxes);
-                            }
+                            session.FillRectangle(new Rect(0, 0, tileSize, tileSize), background.Value);
                         }
 
-                        stream = new InMemoryRandomAccessStream();
-
-                        await canvasRenderTarget.SaveAsync(stream, CanvasBitmapFileFormat.Png);
-
-                        Cache.Set(imageKey, stream);
+                        var collisionBoxes = new List<Polygon>();
+                        foreach (var layer in layers)
+                        {
+                            RasterLayer(session, canvasRenderTarget, tile, layer, style, tileSize, collisionBoxes);
+                        }
                     }
+
+                    await canvasRenderTarget.SaveAsync(stream, CanvasBitmapFileFormat.Png);
                 }
             }
 
@@ -91,20 +81,18 @@ namespace LocalMap
                 return;
             }
 
-            var activeLayers = styleLayers.Where(styleLayer => styleLayer.Filter == null ||
-                                                               styleLayer.Filter.Evaluate(filterType.Value, feature.Id,
-                                                                   attributes)).ToList();
+            var activeLayer = styleLayers.FirstOrDefault(styleLayer => styleLayer.Filter == null ||
+                                                                       styleLayer.Filter.Evaluate(filterType.Value,
+                                                                           feature.Id, attributes));
 
-            var zoom = tile.ZoomLevel;
-
-            var activeLayer = activeLayers.FirstOrDefault();
-
-            if (activeLayer == null && feature.GeometryType != VectorTile.Tile.Types.GeomType.Point)
+            if (activeLayer == null)
             {
                 return;
             }
 
-            var paint = activeLayer?.Paint;
+            var zoom = tile.ZoomLevel;
+
+            var paint = activeLayer.Paint;
             var color = paint?.FillColor?.GetValue(zoom);
             var fillColor = Convert(color) ?? Colors.Black;
             color = paint?.LineColor?.GetValue(zoom);
@@ -131,14 +119,18 @@ namespace LocalMap
             var textHaloColor = Convert(color);
             var textHaloWidth = (float?) paint?.TextHaloWidth?.GetValue(zoom) ?? 0.0f;
 
-            var layout = activeLayer?.Layout;
+            var layout = activeLayer.Layout;
             var fontSize = (float?) layout?.TextSize?.GetValue(zoom) ?? 16.0f;
             fontSize *= (float) tileSize / 256;
 
             var fontFamily = layout?.TextFont?.FirstOrDefault();
             var textPadding = layout?.TextPadding?.GetValue(zoom) ?? 2.0;
 
-            if (attributes.TryGetValue("name", out var name))
+            var language = System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
+
+            var nameKey = $"name:{language}";
+
+            if (attributes.TryGetValue(nameKey, out var name) || attributes.TryGetValue("name", out name))
             {
                 var textTransform = layout?.TextTransform ?? TextTransform.None;
 
@@ -231,7 +223,7 @@ namespace LocalMap
                                     // "ref" is used for motorways
                                     //attributes.TryGetValue("ref", out var refName);
 
-                                    if (name != null && !names.Contains(name))
+                                    if (name != null)
                                     {
                                         using (var format = new CanvasTextFormat
                                             {FontSize = fontSize, WordWrapping = CanvasWordWrapping.NoWrap})
@@ -244,10 +236,8 @@ namespace LocalMap
                                             var line = feature.Geometry[0];
                                             var vectors = line.Select(p => p.ToVector2(scale)).ToList();
 
-                                            if (session.DrawTextOnSegments(name, vectors, textColor, format, collisionBoxes))
-                                            {
-                                                names.Add(name);
-                                            }
+                                            session.DrawTextOnSegments(name, vectors, textColor, format, tileSize,
+                                                collisionBoxes);
                                         }
                                     }
                                 }

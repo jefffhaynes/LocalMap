@@ -1,4 +1,6 @@
-﻿using Windows.Foundation;
+﻿using System.Linq;
+using System.Numerics;
+using Windows.Foundation;
 using Windows.UI.Xaml.Documents;
 
 namespace LocalMap
@@ -18,10 +20,17 @@ namespace LocalMap
                    r.Bottom > rectangle.Bottom;
         }
 
-        public static bool Intersects(this Rect r, Rect rectangle)
+        public static bool Contains(this Rect rect, Vector2 point)
         {
-            r.Intersect(rectangle);
-            return !r.IsEmpty;
+            return rect.Left < point.X &&
+                   rect.Right > point.X &&
+                   rect.Top < point.Y &&
+                   rect.Bottom > point.Y;
+        }
+
+        public static bool Contains(this Rect rect, Polygon polygon)
+        {
+            return polygon.Points.All(p => rect.Contains(p));
         }
     }
 }

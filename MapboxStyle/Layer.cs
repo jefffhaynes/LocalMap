@@ -30,5 +30,10 @@ namespace MapboxStyle
 
         [JsonProperty("filter")]
         public Filter Filter { get; set; }
+
+        public override string ToString()
+        {
+            return SourceLayer;
+        }
     }
 }
