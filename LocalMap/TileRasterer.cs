@@ -9,6 +9,7 @@ using Windows.UI;
 using Mapbox.Vector.Tile;
 using MapboxStyle;
 using Microsoft.Graphics.Canvas;
+using Microsoft.Graphics.Canvas.Effects;
 using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.Text;
 
@@ -214,7 +215,7 @@ namespace LocalMap
 
                                     if (fillOutlineColor != null)
                                     {
-                                        session.DrawGeometry(geometry, fillOutlineColor.Value, 1.0f / scale,
+                                        session.DrawGeometry(geometry, fillOutlineColor.Value, lineWidth,
                                             strokeStyle);
                                     }
                                 }
@@ -222,8 +223,8 @@ namespace LocalMap
                                 {
                                     if (paint.LineGapWidth != null)
                                     {
-                                        // TODO figure out how to draw line outline
-                                        session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
+                                        var width = paint.LineGapWidth.GetValue(zoom);
+                                        session.DrawGeometry(geometry, lineColor, (float) width, strokeStyle);
                                     }
                                     else
                                     {
@@ -246,8 +247,16 @@ namespace LocalMap
                                             var line = feature.Geometry[0];
                                             var vectors = line.Select(p => p.ToVector2(scale)).ToList();
 
+                                            if (layout.TextOffset != null)
+                                            {
+                                                var offset = new Vector2(layout.TextOffset[0], layout.TextOffset[1]);
+                                                session.Transform = Matrix3x2.CreateTranslation(offset);
+                                            }
+
                                             session.DrawTextOnSegments(name, vectors, textColor, format, tileSize,
                                                 collisionBoxes);
+
+                                            session.Transform = Matrix3x2.Identity;
                                         }
                                     }
                                 }
