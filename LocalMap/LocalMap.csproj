@@ -132,6 +132,7 @@
     <Compile Include="RectExtensions.cs" />
     <Compile Include="Tile.cs" />
     <Compile Include="TileRasterer.cs" />
+    <Compile Include="VectorTileSource.cs" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">

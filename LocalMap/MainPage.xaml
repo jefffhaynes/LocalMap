@@ -10,6 +10,6 @@
 
     <Grid>
         <!--<maps:MapControl Name="Map" MapServiceToken="6VMPKsHIHr1t92H3jCjT~OabqLhVSJO3cCtYtpnlXRA~AhaI5POrlZPYOMPYtAR4dQYFyM7Cub2JBPBV3T36u6fWCgkk4Tm_QhFwLWrQNIWf "/>-->
-        <uwp:MapControl Name="Map"/>
+        <uwp:MapControl Name="MapControl"/>
     </Grid>
 </Page>
