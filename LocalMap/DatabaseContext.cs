@@ -7,8 +7,6 @@ namespace LocalMap
     {
         public DbSet<TileModel> Tiles { get; set; }
 
-        public DbSet<DataModel> Images { get; set; }
-
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseSqlite("Filename=2017-07-03_planet_z0_z14.mbtiles");

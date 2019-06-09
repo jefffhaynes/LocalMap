@@ -4,11 +4,12 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:maps="using:Windows.UI.Xaml.Controls.Maps"
+    xmlns:uwp="using:Mapsui.UI.Uwp"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid>
-        <maps:MapControl Name="Map" MapServiceToken="6VMPKsHIHr1t92H3jCjT~OabqLhVSJO3cCtYtpnlXRA~AhaI5POrlZPYOMPYtAR4dQYFyM7Cub2JBPBV3T36u6fWCgkk4Tm_QhFwLWrQNIWf "/>
+        <!--<maps:MapControl Name="Map" MapServiceToken="6VMPKsHIHr1t92H3jCjT~OabqLhVSJO3cCtYtpnlXRA~AhaI5POrlZPYOMPYtAR4dQYFyM7Cub2JBPBV3T36u6fWCgkk4Tm_QhFwLWrQNIWf "/>-->
+        <uwp:MapControl Name="Map"/>
     </Grid>
 </Page>

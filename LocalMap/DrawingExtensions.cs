@@ -122,13 +122,9 @@ namespace LocalMap
                 session.Transform = transform;
 
                 var tileBox = new Rect(0, 0, tileSize, tileSize);
-                if (!tileBox.Contains(collision))
+                if (!tileBox.Contains(collision) || collisionBoxes.Any(b => b.Intersects(collision)))
                 {
-                    return false;
-                }
-
-                if (collisionBoxes.Any(b => b.Intersects(collision)))
-                {
+                    // TODO try to move down segments
                     return false;
                 }
 
