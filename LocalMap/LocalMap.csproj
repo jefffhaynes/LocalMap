@@ -163,9 +163,6 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Mapsui">
-      <Version>1.4.8</Version>
-    </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite">
       <Version>2.2.4</Version>
     </PackageReference>
@@ -184,6 +181,14 @@
     <ProjectReference Include="..\MapboxVectorTile\MapboxVectorTile.csproj">
       <Project>{249e7a50-b958-4e29-8c7c-044541f415fb}</Project>
       <Name>MapboxVectorTile</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Mapsui\Mapsui.UI.Uwp\Mapsui.UI.Uwp.csproj">
+      <Project>{29e628d1-8e8a-49c5-b0f9-555c0f68572a}</Project>
+      <Name>Mapsui.UI.Uwp</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Mapsui\Mapsui\Mapsui.csproj">
+      <Project>{99659bd1-a8f0-482f-bbe9-47c91cc05236}</Project>
+      <Name>Mapsui</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
