@@ -43,16 +43,19 @@ namespace LocalMap
 
                         foreach (var styleLayer in style.Layers)
                         {
-                            foreach (var layer in layers)
+                            var activeLayers = layers.Where(layer => styleLayer.SourceLayer != null &&
+                                                                     styleLayer.SourceLayer.Equals(layer.Name,
+                                                                         StringComparison.CurrentCultureIgnoreCase) &&
+                                                                     (styleLayer.MinimumZoom == null ||
+                                                                      styleLayer.MinimumZoom <= tile.ZoomLevel) &&
+                                                                     (styleLayer.MaximumZoom == null ||
+                                                                      styleLayer.MaximumZoom >= tile.ZoomLevel));
+                                
+                            foreach (var layer in activeLayers)
                             {
-                                if(styleLayer.SourceLayer != null &&
-                                   styleLayer.SourceLayer.Equals(layer.Name, StringComparison.CurrentCultureIgnoreCase) &&
-                                   (styleLayer.MinimumZoom == null || styleLayer.MinimumZoom <= tile.ZoomLevel) &&
-                                   (styleLayer.MaximumZoom == null || styleLayer.MaximumZoom >= tile.ZoomLevel))
-                                {
-                                    var scale = (float)tileSize / layer.Extent;
-                                    RasterLayer(session, canvasRenderTarget, tile, layer.VectorTileFeatures, styleLayer, scale, tileSize, collisionBoxes);
-                                }
+                                var scale = (float) tileSize / layer.Extent;
+                                RasterLayer(session, canvasRenderTarget, tile, layer.VectorTileFeatures, styleLayer,
+                                    scale, tileSize, collisionBoxes);
                             }
                         }
                     }
