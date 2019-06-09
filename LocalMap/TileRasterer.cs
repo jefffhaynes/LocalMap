@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -39,9 +40,20 @@ namespace LocalMap
                         }
 
                         var collisionBoxes = new List<Polygon>();
-                        foreach (var layer in layers)
+
+                        foreach (var styleLayer in style.Layers)
                         {
-                            RasterLayer(session, canvasRenderTarget, tile, layer, style, tileSize, collisionBoxes);
+                            foreach (var layer in layers)
+                            {
+                                if(styleLayer.SourceLayer != null &&
+                                   styleLayer.SourceLayer.Equals(layer.Name, StringComparison.CurrentCultureIgnoreCase) &&
+                                   (styleLayer.MinimumZoom == null || styleLayer.MinimumZoom <= tile.ZoomLevel) &&
+                                   (styleLayer.MaximumZoom == null || styleLayer.MaximumZoom >= tile.ZoomLevel))
+                                {
+                                    var scale = (float)tileSize / layer.Extent;
+                                    RasterLayer(session, canvasRenderTarget, tile, layer.VectorTileFeatures, styleLayer, scale, tileSize, collisionBoxes);
+                                }
+                            }
                         }
                     }
 
@@ -52,39 +64,25 @@ namespace LocalMap
             return stream;
         }
 
-        private static void RasterLayer(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget, Tile tile,
-            VectorTileLayer layer, Style style, int tileSize, List<Polygon> collisionBoxes)
-        {
-            var scale = (float)tileSize / layer.Extent;
-
-            var styleLayers = style.GetLayers(layer.Name, tile.ZoomLevel).ToList();
-
-            foreach (var styleLayer in styleLayers)
-            {
-                RasterFeature(session, canvasRenderTarget, tile, layer.VectorTileFeatures, styleLayer, scale, tileSize,
-                    collisionBoxes);
-            }
-        }
-
-        private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
+        private static void RasterLayer(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
             Tile tile, List<VectorTileFeature> features, Layer styleLayer, float scale, int tileSize,
             List<Polygon> collisionBoxes)
         {
-            foreach (var vectorTileFeature in features)
+            foreach (var feature in features)
             {
-                var attributes = vectorTileFeature.Attributes.ToDictionary(pair => pair.Key,
+                var attributes = feature.Attributes.ToDictionary(pair => pair.Key,
                     pair => pair.Value.ToString());
 
-                var filterType = Convert(vectorTileFeature.GeometryType);
+                var filterType = Convert(feature.GeometryType);
 
                 if (filterType == null)
                 {
                     continue;
                 }
 
-                if (styleLayer.Filter == null || styleLayer.Filter.Evaluate(filterType.Value, vectorTileFeature.Id, attributes))
+                if (styleLayer.Filter == null || styleLayer.Filter.Evaluate(filterType.Value, feature.Id, attributes))
                 {
-                    RasterFeature(session, canvasRenderTarget, tile, vectorTileFeature, scale, tileSize, collisionBoxes,
+                    RasterFeature(session, canvasRenderTarget, tile, feature, scale, tileSize, collisionBoxes,
                         styleLayer, attributes);
                 }
             }
@@ -147,6 +145,8 @@ namespace LocalMap
                         break;
                 }
             }
+
+            var layerType = layer.Type.GetValue(zoom);
 
             switch (feature.GeometryType)
             {
@@ -220,37 +220,27 @@ namespace LocalMap
                                             strokeStyle);
                                     }
                                 }
-                                else
+                                else if (layerType == "symbol" && name != null)
                                 {
-                                    if (paint.LineGapWidth != null)
-                                    {
-                                        var width = paint.LineGapWidth.GetValue(zoom);
-                                        session.DrawGeometry(geometry, lineColor, (float) width, strokeStyle);
-                                    }
-                                    else
-                                    {
-                                        session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
-                                    }
-
                                     // "ref" is used for motorways
                                     //attributes.TryGetValue("ref", out var refName);
 
-                                    if (name != null)
+                                    using (var format = new CanvasTextFormat
+                                        {FontSize = fontSize, WordWrapping = CanvasWordWrapping.NoWrap})
                                     {
-                                        using (var format = new CanvasTextFormat
-                                            {FontSize = fontSize, WordWrapping = CanvasWordWrapping.NoWrap})
+                                        if (fontFamily != null)
                                         {
-                                            if (fontFamily != null)
-                                            {
-                                                format.FontFamily = fontFamily;
-                                            }
+                                            format.FontFamily = fontFamily;
+                                        }
 
-                                            var line = feature.Geometry[0];
+                                        foreach (var line in feature.Geometry)
+                                        {
                                             var vectors = line.Select(p => p.ToVector2(scale)).ToList();
 
                                             if (layout.TextOffset != null)
                                             {
-                                                var offset = new Vector2(layout.TextOffset[0], layout.TextOffset[1]);
+                                                var offset = new Vector2(layout.TextOffset[0],
+                                                    layout.TextOffset[1]);
                                                 session.Transform = Matrix3x2.CreateTranslation(offset);
                                             }
 
@@ -258,8 +248,18 @@ namespace LocalMap
                                                 collisionBoxes);
 
                                             session.Transform = Matrix3x2.Identity;
+
                                         }
                                     }
+                                }
+                                else if (paint.LineGapWidth != null)
+                                {
+                                    var width = paint.LineGapWidth.GetValue(zoom);
+                                    session.DrawGeometry(geometry, lineColor, (float) width, strokeStyle);
+                                }
+                                else
+                                {
+                                    session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
                                 }
                             }
                         }
