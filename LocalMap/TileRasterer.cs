@@ -91,11 +91,11 @@ namespace LocalMap
         }
 
         private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget, Tile tile,
-            VectorTileFeature feature, float scale, int tileSize, List<Polygon> collisionBoxes, Layer activeLayer, Dictionary<string, string> attributes)
+            VectorTileFeature feature, float scale, int tileSize, List<Polygon> collisionBoxes, Layer layer, Dictionary<string, string> attributes)
         {
             var zoom = tile.ZoomLevel;
 
-            var paint = activeLayer.Paint;
+            var paint = layer.Paint;
             var color = paint?.FillColor?.GetValue(zoom);
             var fillColor = Convert(color) ?? Colors.Black;
             color = paint?.LineColor?.GetValue(zoom);
@@ -103,7 +103,7 @@ namespace LocalMap
             if (paint?.FillOpacity != null)
             {
                 var fillOpacity = paint.FillOpacity.GetValue(zoom);
-                fillColor.A = (byte) (fillOpacity * byte.MaxValue);
+                fillColor.A = (byte) (fillOpacity * fillColor.A);
             }
 
             var lineColor = Convert(color) ?? Colors.Black;
@@ -111,7 +111,7 @@ namespace LocalMap
             if (paint?.LineOpacity != null)
             {
                 var lineOpacity = paint.LineOpacity.GetValue(zoom);
-                lineColor.A = (byte) (lineOpacity * byte.MaxValue);
+                lineColor.A = (byte) (lineOpacity * lineColor.A);
             }
 
             color = paint?.TextColor?.GetValue(zoom);
@@ -122,7 +122,7 @@ namespace LocalMap
             var textHaloColor = Convert(color);
             var textHaloWidth = (float?) paint?.TextHaloWidth?.GetValue(zoom) ?? 0.0f;
 
-            var layout = activeLayer.Layout;
+            var layout = layer.Layout;
             var fontSize = (float?) layout?.TextSize?.GetValue(zoom) ?? 16.0f;
             fontSize *= (float) tileSize / 256;
 
@@ -211,6 +211,7 @@ namespace LocalMap
                                 if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
                                 {
                                     session.FillGeometry(geometry, fillColor);
+
                                     var fillOutlineColor = Convert(paint?.FillOutlineColor?.GetValue(zoom));
 
                                     if (fillOutlineColor != null)
@@ -499,7 +500,7 @@ namespace LocalMap
                 case LineJoin.Miter:
                     return CanvasLineJoin.Miter;
                 default:
-                    return default;
+                    return CanvasLineJoin.MiterOrBevel;
             }
         }
     }
