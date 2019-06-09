@@ -14,22 +14,11 @@ namespace LocalMap
     {
         private static Style _style;
 
-        //public async Task LoadTilesAsync(MapTileLayer tileLayer)
-        //{
-        //    var pendingTiles = tileLayer.Tiles.Where(tile => tile.Pending);
-
-        //    foreach (var pendingTile in pendingTiles)
-        //    {
-        //        await LoadTileAsync(pendingTile);
-        //    }
-
-        //    //var tileLoadTasks = pendingTiles.Select(async tile => await LoadTileAsync(tile));
-        //    //return Task.WhenAll(tileLoadTasks);
-        //}
-
         public static async Task<IRandomAccessStream> LoadTileAsync(Tile tile)
         {
             LoadStyle();
+
+            //tile = new Tile(8529, 5974, 14);
 
             using (var db = new DatabaseContext())
             {

@@ -54,42 +54,44 @@ namespace LocalMap
         private static void RasterLayer(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget, Tile tile,
             VectorTileLayer layer, Style style, int tileSize, List<Polygon> collisionBoxes)
         {
+            var scale = (float)tileSize / layer.Extent;
+
             var styleLayers = style.GetLayers(layer.Name, tile.ZoomLevel).ToList();
 
-            var scale = (float) tileSize / layer.Extent;
-
-            var names = new List<string>();
-            foreach (var feature in layer.VectorTileFeatures)
+            foreach (var styleLayer in styleLayers)
             {
-                RasterFeature(session, canvasRenderTarget, tile, feature, styleLayers, scale, tileSize, collisionBoxes, names);
+                RasterFeature(session, canvasRenderTarget, tile, layer.VectorTileFeatures, styleLayer, scale, tileSize,
+                    collisionBoxes);
             }
         }
 
         private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
-            Tile tile, VectorTileFeature feature, IEnumerable<Layer> styleLayers, float scale, int tileSize,
-            List<Polygon> collisionBoxes,
-            List<string> names)
+            Tile tile, List<VectorTileFeature> features, Layer styleLayer, float scale, int tileSize,
+            List<Polygon> collisionBoxes)
         {
-            var attributes =
-                feature.Attributes.ToDictionary(pair => pair.Key,
+            foreach (var vectorTileFeature in features)
+            {
+                var attributes = vectorTileFeature.Attributes.ToDictionary(pair => pair.Key,
                     pair => pair.Value.ToString());
 
-            var filterType = Convert(feature.GeometryType);
+                var filterType = Convert(vectorTileFeature.GeometryType);
 
-            if (filterType == null)
-            {
-                return;
+                if (filterType == null)
+                {
+                    continue;
+                }
+
+                if (styleLayer.Filter == null || styleLayer.Filter.Evaluate(filterType.Value, vectorTileFeature.Id, attributes))
+                {
+                    RasterFeature(session, canvasRenderTarget, tile, vectorTileFeature, scale, tileSize, collisionBoxes,
+                        styleLayer, attributes);
+                }
             }
+        }
 
-            var activeLayer = styleLayers.FirstOrDefault(styleLayer => styleLayer.Filter == null ||
-                                                                       styleLayer.Filter.Evaluate(filterType.Value,
-                                                                           feature.Id, attributes));
-
-            if (activeLayer == null)
-            {
-                return;
-            }
-
+        private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget, Tile tile,
+            VectorTileFeature feature, float scale, int tileSize, List<Polygon> collisionBoxes, Layer activeLayer, Dictionary<string, string> attributes)
+        {
             var zoom = tile.ZoomLevel;
 
             var paint = activeLayer.Paint;
@@ -218,7 +220,15 @@ namespace LocalMap
                                 }
                                 else
                                 {
-                                    session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
+                                    if (paint.LineGapWidth != null)
+                                    {
+                                        // TODO figure out how to draw line outline
+                                        session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
+                                    }
+                                    else
+                                    {
+                                        session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
+                                    }
 
                                     // "ref" is used for motorways
                                     //attributes.TryGetValue("ref", out var refName);

@@ -26,7 +26,8 @@ namespace MapboxStyle
 
         public Layer GetBackground(double zoom)
         {
-            return Layers.FirstOrDefault(layer => EnumHelper<LayerType>.Parse(layer.Type.GetValue(zoom)) == LayerType.Background);
+            return Layers.FirstOrDefault(layer =>
+                EnumHelper<LayerType>.Parse(layer.Type.GetValue(zoom)) == LayerType.Background);
         }
 
         public override string ToString()
