@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -10,7 +10,6 @@ using Windows.UI;
 using Mapbox.Vector.Tile;
 using MapboxStyle;
 using Microsoft.Graphics.Canvas;
-using Microsoft.Graphics.Canvas.Effects;
 using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.Text;
 
@@ -20,7 +19,7 @@ namespace LocalMap
     {
         public static async Task<IRandomAccessStream> RasterAsync(Tile tile, List<VectorTileLayer> layers, Style style)
         {
-            int tileSize = 512;
+            var tileSize = 512;
 
             var stream = new InMemoryRandomAccessStream();
 
@@ -50,7 +49,7 @@ namespace LocalMap
                                                                       styleLayer.MinimumZoom <= tile.ZoomLevel) &&
                                                                      (styleLayer.MaximumZoom == null ||
                                                                       styleLayer.MaximumZoom >= tile.ZoomLevel));
-                                
+
                             foreach (var layer in activeLayers)
                             {
                                 var scale = (float) tileSize / layer.Extent;
@@ -91,8 +90,10 @@ namespace LocalMap
             }
         }
 
-        private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget, Tile tile,
-            VectorTileFeature feature, float scale, int tileSize, List<Polygon> collisionBoxes, Layer styleLayer, Dictionary<string, string> attributes)
+        private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
+            Tile tile,
+            VectorTileFeature feature, float scale, int tileSize, List<Polygon> collisionBoxes, Layer styleLayer,
+            Dictionary<string, string> attributes)
         {
             var zoom = tile.ZoomLevel;
 
@@ -130,7 +131,7 @@ namespace LocalMap
             var fontFamily = layout?.TextFont?.FirstOrDefault();
             var textPadding = layout?.TextPadding?.GetValue(zoom) ?? 2.0;
 
-            var language = System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
+            var language = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
 
             var nameKey = $"name:{language}";
 
@@ -172,7 +173,7 @@ namespace LocalMap
                 case VectorTile.Tile.Types.GeomType.Linestring:
                 case VectorTile.Tile.Types.GeomType.Polygon:
                 {
-                    var loop = feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon
+                    var loop = layerType == "fill"
                         ? CanvasFigureLoop.Closed
                         : CanvasFigureLoop.Open;
 
@@ -219,6 +220,10 @@ namespace LocalMap
 
                                     if (fillOutlineColor != null)
                                     {
+                                        if (styleLayer.SourceLayer == "building")
+                                        {
+                                        }
+
                                         session.DrawGeometry(geometry, fillOutlineColor.Value, lineWidth,
                                             strokeStyle);
                                     }
@@ -259,7 +264,7 @@ namespace LocalMap
                                     var width = paint.LineGapWidth.GetValue(zoom);
                                     session.DrawGeometry(geometry, lineColor, (float) width, strokeStyle);
                                 }
-                                else
+                                else if (layerType == "line")
                                 {
                                     session.DrawGeometry(geometry, lineColor, lineWidth, strokeStyle);
                                 }
