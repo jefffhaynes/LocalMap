@@ -18,8 +18,8 @@ namespace LocalMap
         }
 
         public static void DrawTextOnSegments(this CanvasDrawingSession session, string name, List<Vector2> vectors,
-            Color textColor,
-            CanvasTextFormat format, int tileSize, List<Polygon> collisionBoxes, double maxRotation = Math.PI / 2)
+            Color textColor, CanvasTextFormat format, int tileSize, List<Polygon> collisionBoxes, 
+            double maxRotation = Math.PI / 2)
         {
             var start = vectors[0];
 
@@ -37,18 +37,19 @@ namespace LocalMap
                     }
                     else
                     {
-                        session.Clear(Colors.Transparent);
-                        return;
+                        break;
                     }
 
                     if (charIndex >= name.Length)
                     {
-                        break;
+                        collisionBoxes.AddRange(textCollisionBoxes);
+                        return;
                     }
                 }
-            }
 
-            collisionBoxes.AddRange(textCollisionBoxes);
+                // couldn't draw it
+                session.Clear(Colors.Transparent);
+            }
         }
 
         private static bool DrawTextOnSegment(CanvasDrawingSession session, string value, Color color,
@@ -66,6 +67,7 @@ namespace LocalMap
             {
                 string testValue =
                     value.Substring(characterIndex, lastCharacterIndex - characterIndex + 1);
+
                 using (var textLayout = new CanvasTextLayout(session, testValue, format, 0, 0))
                 {
                     if (textLayout.DrawBounds.Width > distance)
@@ -131,7 +133,7 @@ namespace LocalMap
                 // Update characterIndex and start.
                 characterIndex = lastCharacterIndex + 1;
 
-                width = (float) layout.DrawBounds.Width;
+                width = (float)layout.DrawBounds.Width;
             }
 
             start = new Vector2(start.X + dx * width, start.Y + dy * width);
