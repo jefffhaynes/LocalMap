@@ -23,7 +23,7 @@ namespace MapboxStyle
             var l = InterpolateDouble(x0, x1, hslaColor0.L, hslaColor1.L, x);
             var a = InterpolateDouble(x0, x1, y0.A, y1.A, x);
 
-            var hslaColor = new HslaColor(h, s, l, a);
+            var hslaColor = new HslaColor(h, s, l, a / byte.MaxValue);
 
             return hslaColor.ToColor();
         }

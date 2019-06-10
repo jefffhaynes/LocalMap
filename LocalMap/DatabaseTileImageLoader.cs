@@ -18,7 +18,7 @@ namespace LocalMap
         {
             LoadStyle();
 
-            //tile = new Tile(8529, 5974, 14);
+            // tile = new Tile(8529, 5974, 14);
 
             using (var db = new DatabaseContext())
             {

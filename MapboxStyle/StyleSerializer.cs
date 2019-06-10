@@ -11,6 +11,7 @@ namespace MapboxStyle
             settings.Converters.Add(new ColorFunctionConverter());
             settings.Converters.Add(new DoubleFunctionConverter());
             settings.Converters.Add(new StringFunctionConverter());
+            settings.Converters.Add(new BoolFunctionConverter());
             settings.Converters.Add(new FilterConverter());
 
             var reader = new StreamReader(stream);

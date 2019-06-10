@@ -18,7 +18,7 @@ namespace MapboxStyle
         public DoubleFunction BackgroundOpacity { get; set; }
 
         [JsonProperty("fill-antialias")]
-        public bool? FillAntialias { get; set; }
+        public BoolFunction FillAntialias { get; set; }
 
         [JsonProperty("fill-opacity")]
         public DoubleFunction FillOpacity { get; set; }
@@ -29,8 +29,8 @@ namespace MapboxStyle
         [JsonProperty("fill-outline-color")]
         public ColorFunction FillOutlineColor { get; set; }
 
-        [JsonProperty("fill-translate")]
-        public List<double> FillTranslate { get; set; }
+        //[JsonProperty("fill-translate")]
+        //public List<double> FillTranslate { get; set; }
 
         [JsonProperty("fill-pattern")]
         public string FillPattern { get; set; }
