@@ -16,7 +16,7 @@ namespace MapboxStyle
 
         public static double ParsePercent(this string value)
         {
-            return double.Parse(value.Replace(NumberFormatInfo.CurrentInfo.PercentSymbol, "")) / 100;
+            return double.Parse(value.Replace(NumberFormatInfo.CurrentInfo.PercentSymbol, string.Empty)) / 100;
         }
 
         public static Color ParseHtmlColor(this string htmlColor)
@@ -120,29 +120,28 @@ namespace MapboxStyle
             var s = hsl[1].ParsePercent();
             var l = hsl[2].ParsePercent();
 
-            ColorUtils.HlsToRgb(h, l, s, out var r, out var g, out var b);
+            var hslaColor = new HslaColor(h / 360, s, l);
 
-            return Color.FromArgb(r, g, b);
+            return hslaColor.ToColor();
         }
 
         private static Color ConvertFromHsla(string htmlColor)
         {
-            var hsl = GetValues(HslaPrefix, htmlColor);
+            var hsla = GetValues(HslaPrefix, htmlColor);
 
-            if (hsl.Length != 4)
+            if (hsla.Length != 4)
             {
                 throw new InvalidDataException();
             }
 
-            var h = double.Parse(hsl[0]);
-            var s = hsl[1].ParsePercent();
-            var l = hsl[2].ParsePercent();
-            var a = double.Parse(hsl[3]) * byte.MaxValue;
+            var h = double.Parse(hsla[0]);
+            var s = hsla[1].ParsePercent();
+            var l = hsla[2].ParsePercent();
+            var a = double.Parse(hsla[3]);
 
-            ColorUtils.HlsToRgb(h, l, s, out var r, out var g, out var b);
+            var hslaColor = new HslaColor(h / 360, s, l, a);
 
-            return Color.FromArgb((byte) a, r, g, b);
+            return hslaColor.ToColor();
         }
-        
     }
 }

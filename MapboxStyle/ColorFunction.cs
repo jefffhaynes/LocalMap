@@ -15,17 +15,17 @@ namespace MapboxStyle
 
         protected override Color Interpolate(double x0, double x1, Color y0, Color y1, double x)
         {
-            ColorUtils.RgbToHls(y0.R, y0.G, y0.B, out var h0, out var l0, out var s0);
-            ColorUtils.RgbToHls(y1.R, y1.G, y1.B, out var h1, out var l1, out var s1);
+            var hslaColor0 = HslaColor.FromColor(y0);
+            var hslaColor1 = HslaColor.FromColor(y1);
 
-            var h2 = InterpolateDouble(x0, x1, h0, h1, x);
-            var l2 = InterpolateDouble(x0, x1, l0, l1, x);
-            var s2 = InterpolateDouble(x0, x1, s0, s1, x);
-            var a2 = InterpolateDouble(x0, x1, y0.A, y1.A, x);
+            var h = InterpolateDouble(x0, x1, hslaColor0.H, hslaColor1.H, x);
+            var s = InterpolateDouble(x0, x1, hslaColor0.S, hslaColor1.S, x);
+            var l = InterpolateDouble(x0, x1, hslaColor0.L, hslaColor1.L, x);
+            var a = InterpolateDouble(x0, x1, y0.A, y1.A, x);
 
-            ColorUtils.HlsToRgb(h2, l2, s2, out var r, out var g, out var b);
+            var hslaColor = new HslaColor(h, s, l, a);
 
-            return Color.FromArgb((byte) a2, r, g, b);
+            return hslaColor.ToColor();
         }
     }
 }

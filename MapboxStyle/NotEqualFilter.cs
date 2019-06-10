@@ -10,6 +10,16 @@ namespace MapboxStyle
 
         protected override bool OnEvaluate(string left, string right)
         {
+            if (left == null && right == null)
+            {
+                return false;
+            }
+
+            if (left == null || right == null)
+            {
+                return true;
+            }
+
             return !left.Equals(right, StringComparison.InvariantCultureIgnoreCase);
         }
     }

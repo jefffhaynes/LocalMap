@@ -11,6 +11,11 @@
 
         protected override bool OnEvaluate(string value)
         {
+            if (value == null)
+            {
+                return false;
+            }
+
             return OnEvaluate(value, _value);
         }
 

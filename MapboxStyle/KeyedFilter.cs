@@ -24,7 +24,9 @@ namespace MapboxStyle
                 return OnEvaluate(featureId);
             }
 
-            return featureProperties.TryGetValue(_key, out string value) && OnEvaluate(value);
+            featureProperties.TryGetValue(_key, out string value);
+
+            return OnEvaluate(value);
         }
 
         protected abstract bool OnEvaluate(string value);

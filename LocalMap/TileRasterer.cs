@@ -92,11 +92,11 @@ namespace LocalMap
         }
 
         private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget, Tile tile,
-            VectorTileFeature feature, float scale, int tileSize, List<Polygon> collisionBoxes, Layer layer, Dictionary<string, string> attributes)
+            VectorTileFeature feature, float scale, int tileSize, List<Polygon> collisionBoxes, Layer styleLayer, Dictionary<string, string> attributes)
         {
             var zoom = tile.ZoomLevel;
 
-            var paint = layer.Paint;
+            var paint = styleLayer.Paint;
             var color = paint?.FillColor?.GetValue(zoom);
             var fillColor = Convert(color) ?? Colors.Black;
             color = paint?.LineColor?.GetValue(zoom);
@@ -123,7 +123,7 @@ namespace LocalMap
             var textHaloColor = Convert(color);
             var textHaloWidth = (float?) paint?.TextHaloWidth?.GetValue(zoom) ?? 0.0f;
 
-            var layout = layer.Layout;
+            var layout = styleLayer.Layout;
             var fontSize = (float?) layout?.TextSize?.GetValue(zoom) ?? 16.0f;
             fontSize *= (float) tileSize / 256;
 
@@ -149,7 +149,7 @@ namespace LocalMap
                 }
             }
 
-            var layerType = layer.Type.GetValue(zoom);
+            var layerType = styleLayer.Type.GetValue(zoom);
 
             switch (feature.GeometryType)
             {
@@ -211,7 +211,7 @@ namespace LocalMap
                                     strokeStyle.LineJoin = Convert(layout.LineJoin.Value);
                                 }
 
-                                if (feature.GeometryType == VectorTile.Tile.Types.GeomType.Polygon)
+                                if (layerType == "fill")
                                 {
                                     session.FillGeometry(geometry, fillColor);
 
@@ -251,7 +251,6 @@ namespace LocalMap
                                                 collisionBoxes);
 
                                             session.Transform = Matrix3x2.Identity;
-
                                         }
                                     }
                                 }
