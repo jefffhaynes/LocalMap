@@ -33,9 +33,9 @@ namespace MapboxStyle
 
         public static HslaColor FromColor(Color color)
         {
-            float r = (color.R / 255f);
-            float g = (color.G / 255f);
-            float b = (color.B / 255f);
+            float r = color.R / 255f;
+            float g = color.G / 255f;
+            float b = color.B / 255f;
 
             float min = Math.Min(Math.Min(r, g), b);
             float max = Math.Max(Math.Max(r, g), b);
@@ -76,67 +76,56 @@ namespace MapboxStyle
 
         private static Color ColorFromHsl(double h, double s, double l, double a = 1.0)
         {
-            double r = 0, g = 0, b = 0;
-            if (Math.Abs(l) > double.Epsilon)
+            byte r;
+            byte g;
+            byte b;
+
+            if (Math.Abs(s) < double.Epsilon)
             {
-                if (Math.Abs(s) < double.Epsilon)
-                {
-                    r = g = b = l;
-                }
-                else
-                {
-                    double temp2;
-                    if (l < 0.5)
-                    {
-                        temp2 = l * (1.0 + s);
-                    }
-                    else
-                    {
-                        temp2 = l + s - l * s;
-                    }
+                r = g = b = (byte)(l * 255);
+            }
+            else
+            {
+                float hue = (float)h;
 
-                    var temp1 = 2.0 * l - temp2;
+                var v2 = (float) (l < 0.5 ? l * (1 + s) : l + s - l * s);
+                var v1 = (float) (2 * l - v2);
 
-                    r = GetColorComponent(temp1, temp2, h + 1.0 / 3.0);
-                    g = GetColorComponent(temp1, temp2, h);
-                    b = GetColorComponent(temp1, temp2, h - 1.0 / 3.0);
-                }
+                r = (byte)(255 * HueToRgb(v1, v2, hue + 1.0f / 3));
+                g = (byte)(255 * HueToRgb(v1, v2, hue));
+                b = (byte)(255 * HueToRgb(v1, v2, hue - 1.0f / 3));
             }
 
-            return Color.FromArgb(
-                (int)(a * byte.MaxValue),
-                (int)(byte.MaxValue * r),
-                (int)(byte.MaxValue * g),
-                blue: (int)(byte.MaxValue * b));
+            return Color.FromArgb((int)(a * byte.MaxValue), r, g, b);
         }
 
-        private static double GetColorComponent(double temp1, double temp2, double temp3)
+        private static double HueToRgb(double v1, double v2, double vH)
         {
-            if (temp3 < 0.0)
+            if (vH < 0.0)
             {
-                temp3 += 1.0;
+                vH += 1.0;
             }
-            else if (temp3 > 1.0)
+            else if (vH > 1.0)
             {
-                temp3 -= 1.0;
-            }
-
-            if (temp3 < 1.0 / 6.0)
-            {
-                return temp1 + (temp2 - temp1) * 6.0 * temp3;
+                vH -= 1.0;
             }
 
-            if (temp3 < 0.5)
+            if (vH < 1.0 / 6.0)
             {
-                return temp2;
+                return v1 + (v2 - v1) * 6.0 * vH;
             }
 
-            if (temp3 < 2.0 / 3.0)
+            if (vH < 0.5)
             {
-                return temp1 + (temp2 - temp1) * (2.0 / 3.0 - temp3) * 6.0;
+                return v2;
             }
 
-            return temp1;
+            if (vH < 2.0 / 3.0)
+            {
+                return v1 + (v2 - v1) * (2.0 / 3.0 - vH) * 6.0;
+            }
+
+            return v1;
         }
 
         // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
