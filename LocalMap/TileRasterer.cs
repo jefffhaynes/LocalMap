@@ -17,6 +17,8 @@ namespace LocalMap
 {
     public static class TileRasterer
     {
+        private const int Dpi = 96;
+
         public static async Task<IRandomAccessStream> RasterAsync(Tile tile, List<VectorTileLayer> layers, Style style)
         {
             var tileSize = 512;
@@ -25,7 +27,7 @@ namespace LocalMap
 
             using (var canvasDevice = new CanvasDevice())
             {
-                using (var canvasRenderTarget = new CanvasRenderTarget(canvasDevice, tileSize, tileSize, 96))
+                using (var canvasRenderTarget = new CanvasRenderTarget(canvasDevice, tileSize, tileSize, Dpi))
                 {
                     using (var session = canvasRenderTarget.CreateDrawingSession())
                     {
@@ -127,6 +129,7 @@ namespace LocalMap
             var layout = styleLayer.Layout;
             var fontSize = (float?) layout?.TextSize?.GetValue(zoom) ?? 16.0f;
             fontSize *= (float) tileSize / 256;
+            fontSize *= 72.0f / Dpi;
 
             var fontFamily = layout?.TextFont?.FirstOrDefault();
             var textPadding = layout?.TextPadding?.GetValue(zoom) ?? 2.0;
@@ -173,9 +176,7 @@ namespace LocalMap
                 case VectorTile.Tile.Types.GeomType.Linestring:
                 case VectorTile.Tile.Types.GeomType.Polygon:
                 {
-                    var loop = layerType == "fill"
-                        ? CanvasFigureLoop.Closed
-                        : CanvasFigureLoop.Open;
+                    var loop = layerType == "fill" ? CanvasFigureLoop.Closed : CanvasFigureLoop.Open;
 
                     using (var pathBuilder = new CanvasPathBuilder(canvasRenderTarget))
                     {
@@ -367,14 +368,14 @@ namespace LocalMap
             float maxWidth)
         {
             var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var wordLengths = words.Select(word => Measure(session, word, format)).ToList();
+            var wordLengths = words.Select(word => word.Measure(session, format)).ToList();
 
             if (wordLengths.Count == 1)
             {
                 return wordLengths.First();
             }
 
-            var spaceLength = Measure(session, " ", format);
+            var spaceLength = " ".Measure(session, format);
 
             float maxRowWidth = 0;
             float rowWidth = 0;
@@ -400,14 +401,6 @@ namespace LocalMap
 
             // add one b/c we need to make sure layout happens inside this
             return Math.Max(maxRowWidth, rowWidth) + 1;
-        }
-
-        private static float Measure(CanvasDrawingSession session, string value, CanvasTextFormat format)
-        {
-            using (var layout = new CanvasTextLayout(session, value, format, 0, 0))
-            {
-                return (float) layout.LayoutBoundsIncludingTrailingWhitespace.Width;
-            }
         }
 
         private static void Convert(TextAnchor textAnchor, out CanvasHorizontalAlignment horizontalAlignment,

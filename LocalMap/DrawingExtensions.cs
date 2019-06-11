@@ -17,6 +17,14 @@ namespace LocalMap
             return new Vector2(coordinate.X * scale, coordinate.Y * scale);
         }
 
+        public static float Measure(this string value, CanvasDrawingSession session, CanvasTextFormat format)
+        {
+            using (var layout = new CanvasTextLayout(session, value, format, 0, 0))
+            {
+                return (float) layout.LayoutBoundsIncludingTrailingWhitespace.Width;
+            }
+        }
+
         public static void DrawTextOnSegments(this CanvasDrawingSession session, string name, List<Vector2> vectors,
             Color textColor, CanvasTextFormat format, int tileSize, List<Polygon> collisionBoxes, 
             double maxRotation = Math.PI / 2)
@@ -25,6 +33,8 @@ namespace LocalMap
 
             int charIndex = 0;
             var textCollisionBoxes = new List<Polygon>();
+
+            format.VerticalAlignment = CanvasVerticalAlignment.Center;
 
             using (session.CreateLayer(1))
             {
@@ -65,17 +75,16 @@ namespace LocalMap
             int lastCharacterIndex = characterIndex;
             while (lastCharacterIndex < value.Length)
             {
-                string testValue =
+                string substring =
                     value.Substring(characterIndex, lastCharacterIndex - characterIndex + 1);
 
-                using (var textLayout = new CanvasTextLayout(session, testValue, format, 0, 0))
+                var length = substring.Measure(session, format);
+
+                if (length > distance)
                 {
-                    if (textLayout.DrawBounds.Width > distance)
-                    {
-                        // This is one too many characters.
-                        lastCharacterIndex--;
-                        break;
-                    }
+                    // This is one too many characters.
+                    lastCharacterIndex--;
+                    break;
                 }
 
                 lastCharacterIndex++;
@@ -93,13 +102,13 @@ namespace LocalMap
                 lastCharacterIndex = value.Length - 1;
             }
 
-            string substring =
+            string finalSubstring =
                 value.Substring(characterIndex, lastCharacterIndex - characterIndex + 1);
 
             var transform = session.Transform;
 
             float width;
-            using (var layout = new CanvasTextLayout(session, substring, format, 0, 0))
+            using (var layout = new CanvasTextLayout(session, finalSubstring, format, 0, 0))
             {
                 float angle = (float)Math.Atan2(dy, dx);
 
@@ -115,10 +124,14 @@ namespace LocalMap
                 // Draw the characters that fit.
                 session.DrawTextLayout(layout, start, color);
 
-                var rect = new Rect(start.X, start.Y, layout.DrawBounds.Width,
-                    layout.DrawBounds.Height);
+                width = (float)layout.LayoutBoundsIncludingTrailingWhitespace.Width;
+
+                var rect = new Rect(start.X, start.Y, width,
+                    layout.LayoutBoundsIncludingTrailingWhitespace.Height);
                 var collision = new Polygon(rect).Transform(rotationTransform);
                 collisionBox = collision;
+
+                //session.DrawRectangle(rect, Colors.Purple);
 
                 // reset transform
                 session.Transform = transform;
@@ -132,14 +145,11 @@ namespace LocalMap
 
                 // Update characterIndex and start.
                 characterIndex = lastCharacterIndex + 1;
-
-                width = (float)layout.DrawBounds.Width;
             }
 
             start = new Vector2(start.X + dx * width, start.Y + dy * width);
 
             return true;
         }
-
     }
 }
