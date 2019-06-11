@@ -100,9 +100,15 @@ namespace LocalMap
             var zoom = tile.ZoomLevel;
 
             var paint = styleLayer.Paint;
+
+            if (paint?.FillPattern?.GetValue(zoom) != null)
+            {
+                // not currently supported
+                return;
+            }
+
             var color = paint?.FillColor?.GetValue(zoom);
             var fillColor = Convert(color) ?? Colors.Black;
-            color = paint?.LineColor?.GetValue(zoom);
 
             if (paint?.FillOpacity != null)
             {
@@ -110,6 +116,7 @@ namespace LocalMap
                 fillColor.A = (byte) (fillOpacity * fillColor.A);
             }
 
+            color = paint?.LineColor?.GetValue(zoom);
             var lineColor = Convert(color) ?? Colors.Black;
 
             if (paint?.LineOpacity != null)

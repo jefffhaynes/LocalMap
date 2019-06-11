@@ -29,12 +29,23 @@ namespace LocalMap
             Color textColor, CanvasTextFormat format, int tileSize, List<Polygon> collisionBoxes, 
             double maxRotation = Math.PI / 2)
         {
+            format.VerticalAlignment = CanvasVerticalAlignment.Center;
+
+            while (vectors.Any() && !DrawTextOnSegmentsImpl(session, name, vectors, textColor, format, tileSize,
+                       collisionBoxes, maxRotation))
+            {
+                vectors = vectors.Skip(1).ToList();
+            }
+        }
+
+        private static bool DrawTextOnSegmentsImpl(CanvasDrawingSession session, string name, List<Vector2> vectors, Color textColor,
+            CanvasTextFormat format, int tileSize, List<Polygon> collisionBoxes, double maxRotation)
+        {
             var start = vectors[0];
 
             int charIndex = 0;
             var textCollisionBoxes = new List<Polygon>();
 
-            format.VerticalAlignment = CanvasVerticalAlignment.Center;
 
             using (session.CreateLayer(1))
             {
@@ -53,12 +64,14 @@ namespace LocalMap
                     if (charIndex >= name.Length)
                     {
                         collisionBoxes.AddRange(textCollisionBoxes);
-                        return;
+                        return true;
                     }
                 }
 
                 // couldn't draw it
                 session.Clear(Colors.Transparent);
+
+                return false;
             }
         }
 

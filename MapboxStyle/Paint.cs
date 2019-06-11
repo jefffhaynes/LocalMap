@@ -33,7 +33,7 @@ namespace MapboxStyle
         //public List<double> FillTranslate { get; set; }
 
         [JsonProperty("fill-pattern")]
-        public string FillPattern { get; set; }
+        public StringFunction FillPattern { get; set; }
 
         [JsonProperty("line-miter-limit")]
         public DoubleFunction LineMiterLimit { get; set; }
