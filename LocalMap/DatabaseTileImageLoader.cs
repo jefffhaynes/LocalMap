@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.IO.Compression;
+using System.Numerics;
 using System.Threading.Tasks;
 using Windows.Storage.Streams;
 using Mapbox.Vector.Tile;
@@ -20,13 +23,29 @@ namespace LocalMap
 
             //tile = new Tile(8529, 5974, 14);
 
+            const int maxZoomLevel = 14;
+
             using (var db = new DatabaseContext())
             {
-                var column = tile.X;
-                var row = (1 << tile.ZoomLevel) - tile.Y - 1;
+                Tile effectiveTile;
+                int overzoom = 0;
+                Vector2 overzoomOffset = Vector2.Zero;
+                if (tile.ZoomLevel > maxZoomLevel)
+                {
+                    overzoom = (int) Math.Pow(2, tile.ZoomLevel - maxZoomLevel);
+                    overzoomOffset = new Vector2(tile.X % overzoom, tile.Y % overzoom);
+                    effectiveTile = new Tile(tile.X / overzoom, tile.Y / overzoom, maxZoomLevel);
+                }
+                else
+                {
+                    effectiveTile = tile;
+                }
+
+                var column = effectiveTile.X;
+                var row = (1 << effectiveTile.ZoomLevel) - effectiveTile.Y - 1;
 
                 var tileModel = await db.Tiles.Include(model => model.Data).FirstOrDefaultAsync(model =>
-                    model.ZoomLevel == tile.ZoomLevel && model.Column == column && model.Row == row);
+                    model.ZoomLevel == effectiveTile.ZoomLevel && model.Column == column && model.Row == row);
 
                 if (tileModel == null)
                 {
@@ -40,8 +59,25 @@ namespace LocalMap
                 {
                     layers = VectorTileParser.Parse(gzipStream);
                 }
-                
-                return await TileRasterer.RasterAsync(tile, layers, _style);
+
+                //if (overzoom > 0)
+                //{
+                //    var tileOffset = overzoomOffset / overzoom;
+                //    var size = Vector2.One / overzoom;
+
+                //    foreach (var vectorTileLayer in layers)
+                //    {
+                //        vectorTileLayer.Clip(new RectangleF(tileOffset.X, tileOffset.Y, size.X, size.Y));
+                //    }
+
+                //    if (layers.Count == 0)
+                //    {
+                //        return null;
+                //    }
+                //}
+
+                var tileOffset = overzoom > 0 ? overzoomOffset / overzoom + Vector2.One / (overzoom * 2) : Vector2.Zero;
+                return await TileRasterer.RasterAsync(layers, _style, effectiveTile.ZoomLevel, overzoom, tileOffset);
             }
         }
 

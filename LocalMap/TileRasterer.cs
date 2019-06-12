@@ -19,7 +19,7 @@ namespace LocalMap
     {
         private const int Dpi = 96;
 
-        public static async Task<IRandomAccessStream> RasterAsync(Tile tile, List<VectorTileLayer> layers, Style style)
+        public static async Task<IRandomAccessStream> RasterAsync(List<VectorTileLayer> layers, Style style, float zoom, float overzoom, Vector2 overzoomCenter)
         {
             var tileSize = 512;
 
@@ -31,6 +31,11 @@ namespace LocalMap
                 {
                     using (var session = canvasRenderTarget.CreateDrawingSession())
                     {
+                        //if (overzoom > 0)
+                        //{
+                        //    session.Transform = Matrix3x2.CreateScale(overzoom, overzoomCenter * tileSize);
+                        //}
+
                         session.Antialiasing = CanvasAntialiasing.Antialiased;
 
                         var background = Convert(style.GetBackground(0)?.Paint?.BackgroundColor?.GetValue(0));
@@ -48,14 +53,14 @@ namespace LocalMap
                                                                      styleLayer.SourceLayer.Equals(layer.Name,
                                                                          StringComparison.CurrentCultureIgnoreCase) &&
                                                                      (styleLayer.MinimumZoom == null ||
-                                                                      styleLayer.MinimumZoom <= tile.ZoomLevel) &&
+                                                                      styleLayer.MinimumZoom <= zoom) &&
                                                                      (styleLayer.MaximumZoom == null ||
-                                                                      styleLayer.MaximumZoom >= tile.ZoomLevel));
+                                                                      styleLayer.MaximumZoom >= zoom));
 
                             foreach (var layer in activeLayers)
                             {
                                 var scale = (float) tileSize / layer.Extent;
-                                RasterLayer(session, canvasRenderTarget, tile, layer.VectorTileFeatures, styleLayer,
+                                RasterLayer(session, canvasRenderTarget, zoom, layer.VectorTileFeatures, styleLayer,
                                     scale, tileSize, collisionBoxes);
                             }
                         }
@@ -69,7 +74,7 @@ namespace LocalMap
         }
 
         private static void RasterLayer(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
-            Tile tile, List<VectorTileFeature> features, Layer styleLayer, float scale, int tileSize,
+            float zoom, List<VectorTileFeature> features, Layer styleLayer, float scale, int tileSize,
             List<Polygon> collisionBoxes)
         {
             foreach (var feature in features)
@@ -86,19 +91,17 @@ namespace LocalMap
 
                 if (styleLayer.Filter == null || styleLayer.Filter.Evaluate(filterType.Value, feature.Id, attributes))
                 {
-                    RasterFeature(session, canvasRenderTarget, tile, feature, scale, tileSize, collisionBoxes,
+                    RasterFeature(session, canvasRenderTarget, zoom, feature, scale, tileSize, collisionBoxes,
                         styleLayer, attributes);
                 }
             }
         }
 
         private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
-            Tile tile,
+            float zoom,
             VectorTileFeature feature, float scale, int tileSize, List<Polygon> collisionBoxes, Layer styleLayer,
             Dictionary<string, string> attributes)
         {
-            var zoom = tile.ZoomLevel;
-
             var paint = styleLayer.Paint;
 
             if (paint?.FillPattern?.GetValue(zoom) != null)
@@ -207,7 +210,7 @@ namespace LocalMap
                             {
                                 if (paint?.LineDashArray != null)
                                 {
-                                    strokeStyle.CustomDashStyle = paint.LineDashArray.Select(a => a / scale).ToArray();
+                                    strokeStyle.CustomDashStyle = paint.LineDashArray.ToArray();
                                 }
 
                                 if (layout?.LineCap != null)
@@ -253,6 +256,8 @@ namespace LocalMap
                                         {
                                             var vectors = line.Select(p => p.ToVector2(scale)).ToList();
 
+                                            var transform = session.Transform;
+
                                             if (layout.TextOffset != null)
                                             {
                                                 var offset = new Vector2(layout.TextOffset[0],
@@ -263,7 +268,7 @@ namespace LocalMap
                                             session.DrawTextOnSegments(name, vectors, textColor, format, tileSize,
                                                 collisionBoxes);
 
-                                            session.Transform = Matrix3x2.Identity;
+                                            session.Transform = transform;
                                         }
                                     }
                                 }
