@@ -1,0 +1,20 @@
+﻿namespace LocalMap
+{
+    public class Geoposition
+    {
+        public Geoposition(double latitude, double longitude)
+        {
+            Latitude = latitude;
+            Longitude = longitude;
+        }
+
+        public double Latitude { get; }
+
+        public double Longitude { get; }
+
+        public override string ToString()
+        {
+            return $"{Latitude}°, {Longitude}°";
+        }
+    }
+}
