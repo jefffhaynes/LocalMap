@@ -2,7 +2,7 @@
 {
     public class Geoposition
     {
-        public Geoposition(double latitude, double longitude)
+        public Geoposition(double longitude, double latitude)
         {
             Latitude = latitude;
             Longitude = longitude;
