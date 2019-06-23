@@ -14,7 +14,7 @@
 
         public override string ToString()
         {
-            return $"{Latitude}°, {Longitude}°";
+            return $"{Latitude:F}°, {Longitude:F}°";
         }
     }
 }

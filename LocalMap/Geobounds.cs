@@ -41,12 +41,17 @@ namespace LocalMap
 
         public Geobounds Intersect(Geobounds geobounds)
         {
-            var longitude = Math.Max(Position.Longitude, geobounds.Position.Longitude);
-            var latitude = Math.Min(Position.Latitude, geobounds.Position.Latitude);
-            var right = Math.Min(Right, geobounds.Right);
-            var bottom = Math.Max(Bottom, geobounds.Bottom);
+            var longitude = Math.Clamp(Position.Longitude, geobounds.Left, geobounds.Right);
+            var latitude = Math.Clamp(Position.Latitude, geobounds.Bottom, geobounds.Top);
+            var right = Math.Clamp(Right, geobounds.Left, geobounds.Right);
+            var bottom = Math.Clamp(Bottom, geobounds.Bottom, geobounds.Top);
 
             return new Geobounds(longitude, latitude, right - longitude, latitude - bottom);
+        }
+
+        public override string ToString()
+        {
+            return $"{Position.Latitude:F}, {Position.Longitude:F}, {Bottom:F}, {Right:F}";
         }
     }
 }

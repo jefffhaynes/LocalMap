@@ -15,6 +15,7 @@
         <localMap:MapPanel Name="MapControl"/>
 
         <StackPanel Orientation="Vertical">
+            <TextBlock Text="{Binding ElementName=MapControl, Path=Boundary}" IsHitTestVisible="False"/>
             <TextBlock Text="{Binding ElementName=MapControl, Path=Center}" IsHitTestVisible="False"/>
             <TextBlock Text="{Binding ElementName=MapControl, Path=Zoom}" IsHitTestVisible="False"/>
         </StackPanel>

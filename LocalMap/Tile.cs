@@ -93,9 +93,9 @@ namespace LocalMap
             }
         }
 
-        private static double DegreeToRadian(double angle)
+        public override string ToString()
         {
-            return Math.PI * angle / 180.0;
+            return $"{X}, {Y}";
         }
     }
 }
