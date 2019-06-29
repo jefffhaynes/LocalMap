@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -11,7 +12,6 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
-using Mapsui;
 
 namespace LocalMap
 {
@@ -39,20 +39,24 @@ namespace LocalMap
         public static readonly DependencyProperty BoundaryProperty = DependencyProperty.Register(
             "Boundary", typeof(Geobounds), typeof(MapPanel), new PropertyMetadata(default(Geobounds)));
 
+        public static readonly DependencyProperty BoundsProperty = DependencyProperty.Register(
+            "Bounds", typeof(Rect), typeof(MapPanel), new PropertyMetadata(default(Rect)));
+
+        public Rect Bounds
+        {
+            get { return (Rect) GetValue(BoundsProperty); }
+            set { SetValue(BoundsProperty, value); }
+        }
+
         public Geobounds Boundary
         {
             get => (Geobounds) GetValue(BoundaryProperty);
             private set => SetValue(BoundaryProperty, value);
         }
 
-        //private double _degreesPerPixel;
-
-
         private readonly List<Tile> _tiles = new List<Tile>();
 
-        private Vector2 _zoomCenter;
-        //private double _widthDegreesPerPixel;
-        //private double _heightDegreesPerPixel;
+        //private Vector2 _zoomCenter;
 
         public MapPanel()
         {
@@ -64,6 +68,18 @@ namespace LocalMap
             PointerWheelChanged += OnPointerWheelChanged;
 
             Background = new SolidColorBrush(Colors.Black);
+
+
+            var mapOffsetX = (float)(MapSize - ActualWidth) / 2;
+            var mapOffsetY = (float)(MapSize - ActualHeight) / 2;
+
+            RenderTransform = new CompositeTransform
+            {
+                TranslateX = mapOffsetX,
+                TranslateY = mapOffsetY
+            };
+
+            Children.Add(new Border{BorderBrush = new SolidColorBrush(Colors.Purple), BorderThickness = new Thickness(3)});
         }
 
         private void OnPointerWheelChanged(object sender, PointerRoutedEventArgs e)
@@ -71,7 +87,7 @@ namespace LocalMap
             var point = e.GetCurrentPoint(this);
             var delta = point.Properties.MouseWheelDelta;
 
-            var zoom = Zoom * (delta / 1440.0 + 1);
+            var zoom = Zoom * (delta / (1440.0 * 4) + 1);
 
             if (zoom < 1.0)
             {
@@ -83,9 +99,16 @@ namespace LocalMap
                 return;
             }
 
-            Zoom = zoom;
+            var transform = (CompositeTransform) RenderTransform;
 
-            _zoomCenter = point.Position.ToVector2();
+            var zoomDelta = zoom - Zoom;
+
+            transform.TranslateX += -point.Position.X * zoomDelta;
+            transform.TranslateY += -point.Position.Y * zoomDelta;
+            transform.ScaleX = zoom;
+            transform.ScaleY = zoom;
+
+            Zoom = zoom;
 
             e.Handled = true;
         }
@@ -109,23 +132,16 @@ namespace LocalMap
             await UpdateTilesAsync();
         }
 
-        //private void UpdateDegreesPerPixel()
-        //{
-        //    _widthDegreesPerPixel = WidthDegrees / ActualWidth;
-        //    _heightDegreesPerPixel = HeightDegrees / ActualHeight;
-        //    _degreesPerPixel = Math.Min(_widthDegreesPerPixel, _heightDegreesPerPixel) / Zoom;
-        //}
-
-        private Vector2 _position;
+        //private Vector2 _position;
 
         private async void OnManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
         {
             var delta = e.Delta.Translation;
-            _position += delta.ToVector2();
+            //_position += delta.ToVector2();
 
-            //Center = new Geoposition(
-            //    Center.Longitude + delta.X * WidthDegreesPerPixel,
-            //    Center.Latitude + delta.Y * HeightDegreesPerPixel);
+            var transform = (CompositeTransform) RenderTransform;
+            transform.TranslateX += delta.X;
+            transform.TranslateY += delta.Y;
 
             UpdateTransform();
 
@@ -145,35 +161,16 @@ namespace LocalMap
 
         private int TilesAcross => (int) Math.Pow(2, (int) Zoom);
 
-        //private double TileSize => MapSize / TilesAcross;
-
-        private double WidthDegreesPerPixel => WidthDegrees / MapSize;
-
-        private double HeightDegreesPerPixel => HeightDegrees / MapSize;
 
         private void UpdateTransform()
         {
-            var mapOffsetX = (float)(MapSize - ActualWidth) / 2;
-            var mapOffsetY = (float)(MapSize - ActualHeight) / 2;
-            var d = new Vector2(mapOffsetX, mapOffsetY);
-            var translation = _position - d;
+            var scale = Math.Pow(2, Zoom);
 
-            var scale = Math.Pow(2, Zoom - 1);
+            var element = (FrameworkElement) Window.Current.Content;
+            var transform = element.TransformToVisual(this);
 
-            RenderTransform = new CompositeTransform
-            {
-                TranslateX = translation.X,
-                TranslateY = translation.Y,
-                ScaleX = scale,
-                ScaleY = scale,
-                CenterX = _zoomCenter.X,
-                CenterY = _zoomCenter.Y
-            };
-
-            var transform = Window.Current.Content.TransformToVisual(this);
-
-            var mapCenter = transform.TransformPoint(new Point(ActualWidth / 2, ActualHeight / 2));
-            var mapBounds = transform.TransformBounds(new Rect(0, 0, ActualWidth, ActualHeight));
+            var mapCenter = transform.TransformPoint(new Point(element.ActualWidth / 2, element.ActualHeight / 2));
+            var mapBounds = transform.TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
 
             var geoTransform = new CompositeTransform
             {
@@ -183,11 +180,18 @@ namespace LocalMap
                 ScaleY = -HeightDegrees / MapSize
             };
 
+            //mapBounds.Intersect(new Rect(0, 0, ActualWidth, ActualHeight));
+            Bounds = new Rect(mapBounds.X, mapBounds.Y, mapBounds.Width * scale, mapBounds.Height * scale);
+
             var center = geoTransform.TransformPoint(mapCenter);
             Center = new Geoposition(center.X, center.Y);
+            //Center = Mercator.Project(mapCenter.ToVector2(), MapSize);
 
             var bounds = geoTransform.TransformBounds(mapBounds);
-            Boundary = new Geobounds(bounds.X, bounds.Bottom, bounds.Width, bounds.Height).Intersect(MaxBounds);
+            Boundary = new Geobounds(bounds.X, bounds.Bottom, bounds.Width, bounds.Height);
+
+            //Boundary = Mercator.Project(mapBounds, MapSize);
+
         }
 
         //public Geobounds Boundary { get; private set; }
@@ -199,21 +203,31 @@ namespace LocalMap
             //var boundary = Boundary;
 
             var zoomLevel = (int)Zoom;
-            var topLeft = Tile.FromPosition(Boundary.TopLeft, zoomLevel);
-            var bottomRight = Tile.FromPosition(Boundary.BottomRight, zoomLevel);
+            //var topLeft = Tile.FromPosition(Boundary.TopLeft, zoomLevel);
+            //var bottomRight = Tile.FromPosition(Boundary.BottomRight, zoomLevel);
 
             var max = TilesAcross - 1;
 
-            var left = Math.Clamp(topLeft.X, 0, max);
-            var right = Math.Clamp(bottomRight.X, 0, max);
-            var top = Math.Clamp(topLeft.Y, 0, max);
-            var bottom = Math.Clamp(bottomRight.Y, 0, max);
+            //var left = (int)Math.Clamp(Bounds.Left, 0, ActualWidth);
+            //var right = (int)Math.Clamp(Bounds.Right, 0, ActualWidth);
+            //var top = (int)Math.Clamp(Bounds.Top, 0, ActualHeight);
+            //var bottom = (int)Math.Clamp(Bounds.Bottom, 0, ActualHeight);
+
+            var left = Math.Max(Bounds.Left / TileSize, 0);
+            var right = Math.Ceiling(Bounds.Right / TileSize);
+            var top = Math.Max(Bounds.Top / TileSize, 0);
+            var bottom = Math.Ceiling(Bounds.Bottom / TileSize);
+            
+            left = Math.Clamp(left, 0, max);
+            right = Math.Clamp(right, 0, max);
+            top = Math.Clamp(top, 0, max);
+            bottom = Math.Clamp(bottom, 0, max);
 
             var tiles = new List<Tile>();
 
-            for (int x = left; x <= right; x++)
+            for (int x = (int) left; x <= right; x++)
             {
-                for (int y = top; y <= bottom; y++)
+                for (int y = (int) top; y <= bottom; y++)
                 {
                     var tile = new Tile(x, y, zoomLevel);
 
@@ -229,7 +243,10 @@ namespace LocalMap
 
             foreach (var uiElement in elements)
             {
-                Children.Add(uiElement);
+                if (uiElement != null)
+                {
+                    Children.Add(uiElement);
+                }
             }
 
             _tiles.AddRange(tiles);
@@ -243,7 +260,7 @@ namespace LocalMap
                 foreach (FrameworkElement child in Children)
                 {
                     var tile = (Tile)child.DataContext;
-                    if (tile.ZoomLevel == _lastZoomLevel)
+                    if (tile?.ZoomLevel == _lastZoomLevel)
                     {
                         toRemove.Add(child);
                     }
@@ -264,6 +281,11 @@ namespace LocalMap
         {
             using (var stream = await DatabaseTileImageLoader.LoadTileAsync(tile))
             {
+                if (stream == null)
+                {
+                    return null;
+                }
+
                 var bitmap = new BitmapImage();
                 bitmap.SetSource(stream);
 
@@ -274,12 +296,18 @@ namespace LocalMap
                     Stretch = Stretch.Fill
                 };
 
+                var max = Math.Pow(2, tile.ZoomLevel) - 1;
+                if (tile.X > max || tile.Y > max)
+                {
+                    return null;
+                }
+
                 //var image = new TextBlock();
                 //image.TextAlignment = TextAlignment.Left;
                 //image.HorizontalTextAlignment = TextAlignment.Left;
                 //image.HorizontalAlignment = HorizontalAlignment.Stretch;
                 //image.VerticalAlignment = VerticalAlignment.Stretch;
-                //image.Text = $"{tile.X}, {tile.Y}";
+                //image.Text = $"{tile.X}, {tile.Y} ({tile.ZoomLevel})";
                 //image.Width = TileSize;
                 //image.Height = TileSize;
 
@@ -297,14 +325,23 @@ namespace LocalMap
 
         protected override Size ArrangeOverride(Size finalSize)
         {
-            var scale = 1.0 / (int) Zoom;
+            var scale = 2.0 / TilesAcross;
             var tileSize = TileSize * scale;
 
             foreach (FrameworkElement child in Children)
             {
                 var tile = (Tile) child.DataContext;
-                var rect = new Rect(tile.X * tileSize, tile.Y * tileSize, tileSize, tileSize);
-                child.Arrange(rect);
+
+                if (tile == null)
+                {
+                    var rect = new Rect(0, 0, MapSize, MapSize);
+                    child.Arrange(rect);
+                }
+                else
+                {
+                    var rect = new Rect(tile.X * tileSize, tile.Y * tileSize, tileSize, tileSize);
+                    child.Arrange(rect);
+                }
             }
 
             return finalSize;

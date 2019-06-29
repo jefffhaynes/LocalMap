@@ -17,6 +17,11 @@ namespace LocalMap
         {
         }
 
+        public Geobounds(Geoposition topLeft, Geoposition bottomRight) :
+            this(topLeft, bottomRight.Longitude - topLeft.Longitude, topLeft.Latitude - bottomRight.Latitude)
+        {
+        }
+
         public Geoposition Position { get; }
         
         public double Width { get; }
