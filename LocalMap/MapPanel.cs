@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.UI;
+using Windows.UI.Core;
 using Windows.UI.Input;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -55,7 +56,9 @@ namespace LocalMap
             private set => SetValue(BoundaryProperty, value);
         }
 
-        private readonly List<Tile> _tiles = new List<Tile>();
+        //private readonly List<Tile> _tiles = new List<Tile>();
+
+        private readonly Dictionary<Tile, UIElement> _tiles = new Dictionary<Tile, UIElement>();
 
         //private Vector2 _zoomCenter;
 
@@ -79,6 +82,8 @@ namespace LocalMap
                 TranslateX = mapOffsetX,
                 TranslateY = mapOffsetY
             };
+
+            UseLayoutRounding = false;
         }
 
         private void OnPointerWheelChanged(object sender, PointerRoutedEventArgs e)
@@ -86,7 +91,7 @@ namespace LocalMap
             var point = e.GetCurrentPoint(this);
             var delta = point.Properties.MouseWheelDelta;
 
-            var zoom = Zoom * (delta / (1440.0 * 4) + 1);
+            var zoom = Zoom * (delta / 1440.0 + 1);
 
             if (zoom < 1.0)
             {
@@ -192,21 +197,10 @@ namespace LocalMap
 
         //public Geobounds Boundary { get; private set; }
 
-        private int _lastZoomLevel;
-
-        private bool _updating;
 
         private async Task UpdateTilesAsync()
         {
-            if (_updating)
-            {
-                return;
-            }
-
-            _updating = true;
-
-
-            var zoomLevel = (int)Zoom;
+            var zoomLevel = (int) Zoom;
 
             var tileSize = TileSize / Math.Pow(2, zoomLevel - 1);
 
@@ -222,7 +216,7 @@ namespace LocalMap
             top = Math.Clamp(top, 0, max);
             bottom = Math.Clamp(bottom, 0, max);
 
-            var tiles = new List<Tile>();
+            var tasks = new List<Task>();
 
             for (int x = left; x <= right; x++)
             {
@@ -230,77 +224,74 @@ namespace LocalMap
                 {
                     var tile = new Tile(x, y, zoomLevel);
 
-                    if (!_tiles.Contains(tile))
+                    if (!_tiles.ContainsKey(tile))
                     {
+                        //Debug.WriteLine($"Fetching {tile}");
 
-                        Debug.WriteLine($"Fetching {tile}");
-                        tiles.Add(tile);
+                        var image = new Image
+                        {
+                            DataContext = tile,
+                            Stretch = Stretch.Fill,
+                            Width = tileSize,
+                            Height = tileSize
+                        };
+
+                        //var image = new Border
+                        //{
+                        //    //Child = image,
+                        //    BorderBrush = new SolidColorBrush(Colors.Purple),
+                        //    BorderThickness = new Thickness(0.5),
+                        //    DataContext = tile,
+                        //    Width = tileSize,
+                        //    Height = tileSize
+                        //};
+
+                        _tiles.Add(tile, image);
+
+                        Children.Add(image);
+
+                        var task = Task.Run(() => FetchAsync(tile, image));
+                        tasks.Add(task);
                     }
                 }
             }
 
+            await Task.WhenAll(tasks);
 
-            var addTasks = tiles.Select(AddTileAsync);
-            await Task.WhenAll(addTasks);
+            // TODO trim outside bounds
+            var toRemove = _tiles.Where(kvp => kvp.Key.ZoomLevel != zoomLevel).ToList();
 
-            _tiles.AddRange(tiles);
-
-            if (zoomLevel != _lastZoomLevel)
+            foreach (var keyValuePair in toRemove)
             {
-                _tiles.RemoveAll(tile => tile.ZoomLevel == _lastZoomLevel);
-
-                var toRemove = new List<UIElement>();
-
-                foreach (FrameworkElement child in Children)
-                {
-                    var tile = (Tile)child.DataContext;
-                    if (tile?.ZoomLevel == _lastZoomLevel)
-                    {
-                        toRemove.Add(child);
-                    }
-                }
-
-                foreach (var uiElement in toRemove)
-                {
-                    Children.Remove(uiElement);
-                }
-            }
-
-            //InvalidateArrange();
-
-            _lastZoomLevel = zoomLevel;
-
-            _updating = false;
-        }
-
-        private async Task AddTileAsync(Tile tile)
-        {
-            var element = await FetchAsync(tile);
-
-            if (element != null)
-            {
-                Children.Add(element);
+                Children.Remove(keyValuePair.Value);
+                _tiles.Remove(keyValuePair.Key);
             }
         }
 
-        private async Task<UIElement> FetchAsync(Tile tile)
+        private async Task FetchAsync(Tile tile, Image image)
         {
             using (var stream = await DatabaseTileImageLoader.LoadTileAsync(tile))
             {
                 if (stream == null)
                 {
-                    return null;
+                    return;
                 }
 
-                var bitmap = new BitmapImage();
-                bitmap.SetSource(stream);
-
-                var image = new Image
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
-                    Source = bitmap,
-                    DataContext = tile,
-                    Stretch = Stretch.Fill
-                };
+                    var bitmap = new BitmapImage();
+                    bitmap.SetSource(stream);
+                    image.Source = bitmap;
+                });
+
+
+                //var image = new Image
+                //{
+                //    Source = bitmap,
+                //    DataContext = tile,
+                //    Stretch = Stretch.Fill
+                //};
+
 
                 //var max = Math.Pow(2, tile.ZoomLevel) - 1;
                 //if (tile.X > max || tile.Y > max)
@@ -325,7 +316,7 @@ namespace LocalMap
 
                 //border.DataContext = tile;
 
-                return image;
+                //return image;
             }
         }
 
