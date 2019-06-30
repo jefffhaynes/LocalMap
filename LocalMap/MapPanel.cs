@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.UI;
@@ -45,7 +46,7 @@ namespace LocalMap
         public Rect Bounds
         {
             get => (Rect) GetValue(BoundsProperty);
-            set { SetValue(BoundsProperty, value); }
+            set => SetValue(BoundsProperty, value);
         }
 
         public Geobounds Boundary
@@ -69,6 +70,15 @@ namespace LocalMap
             PointerWheelChanged += OnPointerWheelChanged;
 
             Background = new SolidColorBrush(Colors.Black);
+
+            var mapOffsetX = (float)(MapSize - ActualWidth) / 2;
+            var mapOffsetY = (float)(MapSize - ActualHeight) / 2;
+
+            RenderTransform = new CompositeTransform
+            {
+                TranslateX = mapOffsetX,
+                TranslateY = mapOffsetY
+            };
         }
 
         private void OnPointerWheelChanged(object sender, PointerRoutedEventArgs e)
@@ -148,8 +158,6 @@ namespace LocalMap
 
         private int TilesAcross => (int) Math.Pow(2, (int) Zoom);
 
-        private double _scale;
-
         private void UpdateTransform()
         {
             var element = (FrameworkElement) Window.Current.Content;
@@ -160,8 +168,6 @@ namespace LocalMap
 
             //mapBounds.Intersect(new Rect(0, 0, ActualWidth, ActualHeight));
             Bounds = new Rect(mapBounds.X, mapBounds.Y, mapBounds.Width, mapBounds.Height);
-            _scale = element.ActualWidth / mapBounds.Width;
-            var test = Math.Pow(2, Zoom - 1);
 
 
             var geoTransform = new CompositeTransform
@@ -188,8 +194,18 @@ namespace LocalMap
 
         private int _lastZoomLevel;
 
+        private bool _updating;
+
         private async Task UpdateTilesAsync()
         {
+            if (_updating)
+            {
+                return;
+            }
+
+            _updating = true;
+
+
             var zoomLevel = (int)Zoom;
 
             var tileSize = TileSize / Math.Pow(2, zoomLevel - 1);
@@ -216,13 +232,16 @@ namespace LocalMap
 
                     if (!_tiles.Contains(tile))
                     {
+
+                        Debug.WriteLine($"Fetching {tile}");
                         tiles.Add(tile);
                     }
                 }
             }
 
-            var fetchTasks = tiles.Select(AddTileAsync);
-            await Task.WhenAll(fetchTasks);
+
+            var addTasks = tiles.Select(AddTileAsync);
+            await Task.WhenAll(addTasks);
 
             _tiles.AddRange(tiles);
 
@@ -250,6 +269,8 @@ namespace LocalMap
             //InvalidateArrange();
 
             _lastZoomLevel = zoomLevel;
+
+            _updating = false;
         }
 
         private async Task AddTileAsync(Tile tile)
@@ -310,23 +331,14 @@ namespace LocalMap
 
         protected override Size ArrangeOverride(Size finalSize)
         {
-            var scale = 2.0 / TilesAcross;
-            var tileSize = TileSize * scale;
-
             foreach (FrameworkElement child in Children)
             {
                 var tile = (Tile) child.DataContext;
+                var scale = 2.0 / Math.Pow(2, tile.ZoomLevel);
+                var tileSize = TileSize * scale;
 
-                if (tile == null)
-                {
-                    var rect = new Rect(0, 0, MapSize, MapSize);
-                    child.Arrange(rect);
-                }
-                else
-                {
-                    var rect = new Rect(tile.X * tileSize, tile.Y * tileSize, tileSize, tileSize);
-                    child.Arrange(rect);
-                }
+                var rect = new Rect(tile.X * tileSize, tile.Y * tileSize, tileSize, tileSize);
+                child.Arrange(rect);
             }
 
             return finalSize;

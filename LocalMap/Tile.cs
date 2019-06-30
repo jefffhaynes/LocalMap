@@ -89,7 +89,7 @@ namespace LocalMap
 
         public override string ToString()
         {
-            return $"{X}, {Y}";
+            return $"{X}, {Y} @ {ZoomLevel}";
         }
     }
 }
