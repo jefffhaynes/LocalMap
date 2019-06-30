@@ -44,7 +44,7 @@ namespace LocalMap
 
         public Rect Bounds
         {
-            get { return (Rect) GetValue(BoundsProperty); }
+            get => (Rect) GetValue(BoundsProperty);
             set { SetValue(BoundsProperty, value); }
         }
 
@@ -58,6 +58,7 @@ namespace LocalMap
 
         //private Vector2 _zoomCenter;
 
+
         public MapPanel()
         {
             ManipulationMode = ManipulationModes.TranslateX | ManipulationModes.TranslateY |
@@ -68,18 +69,6 @@ namespace LocalMap
             PointerWheelChanged += OnPointerWheelChanged;
 
             Background = new SolidColorBrush(Colors.Black);
-
-
-            var mapOffsetX = (float)(MapSize - ActualWidth) / 2;
-            var mapOffsetY = (float)(MapSize - ActualHeight) / 2;
-
-            RenderTransform = new CompositeTransform
-            {
-                TranslateX = mapOffsetX,
-                TranslateY = mapOffsetY
-            };
-
-            Children.Add(new Border{BorderBrush = new SolidColorBrush(Colors.Purple), BorderThickness = new Thickness(3)});
         }
 
         private void OnPointerWheelChanged(object sender, PointerRoutedEventArgs e)
@@ -101,12 +90,14 @@ namespace LocalMap
 
             var transform = (CompositeTransform) RenderTransform;
 
-            var zoomDelta = zoom - Zoom;
+            var scale = Math.Pow(2, zoom - 1);
 
-            transform.TranslateX += -point.Position.X * zoomDelta;
-            transform.TranslateY += -point.Position.Y * zoomDelta;
-            transform.ScaleX = zoom;
-            transform.ScaleY = zoom;
+            var scaleDelta = scale - transform.ScaleX;
+
+            transform.TranslateX += -point.Position.X * scaleDelta;
+            transform.TranslateY += -point.Position.Y * scaleDelta;
+            transform.ScaleX = scale;
+            transform.ScaleY = scale;
 
             Zoom = zoom;
 
@@ -127,17 +118,13 @@ namespace LocalMap
 
         private async void OnSizeChanged(object sender, SizeChangedEventArgs e)
         {
-            //UpdateDegreesPerPixel();
             UpdateTransform();
             await UpdateTilesAsync();
         }
 
-        //private Vector2 _position;
-
         private async void OnManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
         {
             var delta = e.Delta.Translation;
-            //_position += delta.ToVector2();
 
             var transform = (CompositeTransform) RenderTransform;
             transform.TranslateX += delta.X;
@@ -161,16 +148,21 @@ namespace LocalMap
 
         private int TilesAcross => (int) Math.Pow(2, (int) Zoom);
 
+        private double _scale;
 
         private void UpdateTransform()
         {
-            var scale = Math.Pow(2, Zoom);
-
             var element = (FrameworkElement) Window.Current.Content;
             var transform = element.TransformToVisual(this);
 
             var mapCenter = transform.TransformPoint(new Point(element.ActualWidth / 2, element.ActualHeight / 2));
             var mapBounds = transform.TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
+
+            //mapBounds.Intersect(new Rect(0, 0, ActualWidth, ActualHeight));
+            Bounds = new Rect(mapBounds.X, mapBounds.Y, mapBounds.Width, mapBounds.Height);
+            _scale = element.ActualWidth / mapBounds.Width;
+            var test = Math.Pow(2, Zoom - 1);
+
 
             var geoTransform = new CompositeTransform
             {
@@ -180,8 +172,6 @@ namespace LocalMap
                 ScaleY = -HeightDegrees / MapSize
             };
 
-            //mapBounds.Intersect(new Rect(0, 0, ActualWidth, ActualHeight));
-            Bounds = new Rect(mapBounds.X, mapBounds.Y, mapBounds.Width * scale, mapBounds.Height * scale);
 
             var center = geoTransform.TransformPoint(mapCenter);
             Center = new Geoposition(center.X, center.Y);
@@ -200,24 +190,17 @@ namespace LocalMap
 
         private async Task UpdateTilesAsync()
         {
-            //var boundary = Boundary;
-
             var zoomLevel = (int)Zoom;
-            //var topLeft = Tile.FromPosition(Boundary.TopLeft, zoomLevel);
-            //var bottomRight = Tile.FromPosition(Boundary.BottomRight, zoomLevel);
+
+            var tileSize = TileSize / Math.Pow(2, zoomLevel - 1);
+
+            var left = (int) Math.Max(Bounds.Left / tileSize, 0);
+            var right = (int) Math.Ceiling(Bounds.Right / tileSize);
+            var top = (int) Math.Max(Bounds.Top / tileSize, 0);
+            var bottom = (int) Math.Ceiling(Bounds.Bottom / tileSize);
 
             var max = TilesAcross - 1;
 
-            //var left = (int)Math.Clamp(Bounds.Left, 0, ActualWidth);
-            //var right = (int)Math.Clamp(Bounds.Right, 0, ActualWidth);
-            //var top = (int)Math.Clamp(Bounds.Top, 0, ActualHeight);
-            //var bottom = (int)Math.Clamp(Bounds.Bottom, 0, ActualHeight);
-
-            var left = Math.Max(Bounds.Left / TileSize, 0);
-            var right = Math.Ceiling(Bounds.Right / TileSize);
-            var top = Math.Max(Bounds.Top / TileSize, 0);
-            var bottom = Math.Ceiling(Bounds.Bottom / TileSize);
-            
             left = Math.Clamp(left, 0, max);
             right = Math.Clamp(right, 0, max);
             top = Math.Clamp(top, 0, max);
@@ -225,9 +208,9 @@ namespace LocalMap
 
             var tiles = new List<Tile>();
 
-            for (int x = (int) left; x <= right; x++)
+            for (int x = left; x <= right; x++)
             {
-                for (int y = (int) top; y <= bottom; y++)
+                for (int y = top; y <= bottom; y++)
                 {
                     var tile = new Tile(x, y, zoomLevel);
 
@@ -238,16 +221,8 @@ namespace LocalMap
                 }
             }
 
-            var fetchTasks = tiles.Select(FetchAsync);
-            var elements = await Task.WhenAll(fetchTasks);
-
-            foreach (var uiElement in elements)
-            {
-                if (uiElement != null)
-                {
-                    Children.Add(uiElement);
-                }
-            }
+            var fetchTasks = tiles.Select(AddTileAsync);
+            await Task.WhenAll(fetchTasks);
 
             _tiles.AddRange(tiles);
 
@@ -277,6 +252,16 @@ namespace LocalMap
             _lastZoomLevel = zoomLevel;
         }
 
+        private async Task AddTileAsync(Tile tile)
+        {
+            var element = await FetchAsync(tile);
+
+            if (element != null)
+            {
+                Children.Add(element);
+            }
+        }
+
         private async Task<UIElement> FetchAsync(Tile tile)
         {
             using (var stream = await DatabaseTileImageLoader.LoadTileAsync(tile))
@@ -296,11 +281,11 @@ namespace LocalMap
                     Stretch = Stretch.Fill
                 };
 
-                var max = Math.Pow(2, tile.ZoomLevel) - 1;
-                if (tile.X > max || tile.Y > max)
-                {
-                    return null;
-                }
+                //var max = Math.Pow(2, tile.ZoomLevel) - 1;
+                //if (tile.X > max || tile.Y > max)
+                //{
+                //    return null;
+                //}
 
                 //var image = new TextBlock();
                 //image.TextAlignment = TextAlignment.Left;
@@ -311,15 +296,15 @@ namespace LocalMap
                 //image.Width = TileSize;
                 //image.Height = TileSize;
 
-                var border = new Border();
-                border.Background = new SolidColorBrush(Colors.Blue);
-                border.BorderBrush = new SolidColorBrush(Colors.Red);
-                border.BorderThickness = new Thickness(1 / Zoom);
-                border.Child = image;
+                //var border = new Border();
+                //border.Background = new SolidColorBrush(Colors.Blue);
+                //border.BorderBrush = new SolidColorBrush(Colors.Red);
+                //border.BorderThickness = new Thickness(1 / Zoom);
+                //border.Child = image;
 
-                border.DataContext = tile;
+                //border.DataContext = tile;
 
-                return border;
+                return image;
             }
         }
 

@@ -13,6 +13,9 @@ namespace MapboxStyle
         [JsonProperty("version")]
         public int Version { get; set; }
 
+        [JsonProperty("sprite")]
+        public string Sprite { get; set; }
+
         [JsonProperty("layers")]
         public List<Layer> Layers { get; set; }
 
