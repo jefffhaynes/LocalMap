@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.Foundation;
+using Windows.Storage.Streams;
 using Windows.UI;
 using Windows.UI.Core;
 using Windows.UI.Input;
@@ -14,6 +16,11 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
+using Windows.UI.Xaml.Media.Media3D;
+using Microsoft.Graphics.Canvas;
+using Microsoft.Graphics.Canvas.Effects;
+using Microsoft.Graphics.Canvas.UI;
+using Microsoft.Graphics.Canvas.UI.Xaml;
 
 namespace LocalMap
 {
@@ -59,6 +66,7 @@ namespace LocalMap
         //private readonly List<Tile> _tiles = new List<Tile>();
 
         private readonly Dictionary<Tile, UIElement> _tiles = new Dictionary<Tile, UIElement>();
+        private readonly Dictionary<Tile, CanvasBitmap> _tileBitmaps = new Dictionary<Tile, CanvasBitmap>();
 
         //private Vector2 _zoomCenter;
 
@@ -91,7 +99,7 @@ namespace LocalMap
             var point = e.GetCurrentPoint(this);
             var delta = point.Properties.MouseWheelDelta;
 
-            var zoom = Zoom * (delta / 1440.0 + 1);
+            var zoom = Zoom + delta / 1440.0;
 
             if (zoom < 1.0)
             {
@@ -202,7 +210,8 @@ namespace LocalMap
         {
             var zoomLevel = (int) Zoom;
 
-            var tileSize = TileSize / Math.Pow(2, zoomLevel - 1);
+            var scale = 1 / Math.Pow(2, zoomLevel - 1);
+            var tileSize = TileSize * scale;
 
             var left = (int) Math.Max(Bounds.Left / tileSize, 0);
             var right = (int) Math.Ceiling(Bounds.Right / tileSize);
@@ -216,8 +225,6 @@ namespace LocalMap
             top = Math.Clamp(top, 0, max);
             bottom = Math.Clamp(bottom, 0, max);
 
-            var tasks = new List<Task>();
-
             for (int x = left; x <= right; x++)
             {
                 for (int y = top; y <= bottom; y++)
@@ -226,16 +233,26 @@ namespace LocalMap
 
                     if (!_tiles.ContainsKey(tile))
                     {
-                        //Debug.WriteLine($"Fetching {tile}");
+                        Debug.WriteLine($"Fetching {tile}");
 
-                        var image = new Image
-                        {
-                            DataContext = tile,
-                            Stretch = Stretch.Fill,
-                            Width = tileSize,
-                            Height = tileSize
-                        };
+                        //var image = new Image
+                        //{
+                        //    DataContext = tile, Stretch = Stretch.None
+                        //};
 
+                        var canvas = new CanvasControl();
+                        canvas.DataContext = tile;
+                        canvas.Width = TileSize;
+                        canvas.Height = TileSize;
+                        canvas.UseLayoutRounding = false;
+
+                        //canvas.CreateResources += CanvasOnCreateResources;
+                        canvas.Draw += CanvasOnDraw;
+
+                        var box = new Viewbox();
+                        box.Child = canvas;
+                        box.DataContext = tile;
+                        box.UseLayoutRounding = false;
                         //var image = new Border
                         //{
                         //    //Child = image,
@@ -246,17 +263,17 @@ namespace LocalMap
                         //    Height = tileSize
                         //};
 
-                        _tiles.Add(tile, image);
+                        _tiles.Add(tile, box);
 
-                        Children.Add(image);
+                        Children.Add(box);
 
-                        var task = Task.Run(() => FetchAsync(tile, image));
-                        tasks.Add(task);
+                        //var task = Task.Run(() => FetchAsync(tile, canvas));
+                        //tasks.Add(task);
                     }
                 }
             }
 
-            await Task.WhenAll(tasks);
+            //await Task.WhenAll(tasks);
 
             // TODO trim outside bounds
             var toRemove = _tiles.Where(kvp => kvp.Key.ZoomLevel != zoomLevel).ToList();
@@ -265,58 +282,32 @@ namespace LocalMap
             {
                 Children.Remove(keyValuePair.Value);
                 _tiles.Remove(keyValuePair.Key);
+
+                ((CanvasControl) ((Viewbox) keyValuePair.Value).Child).RemoveFromVisualTree();
             }
         }
 
-        private async Task FetchAsync(Tile tile, Image image)
+        //private void CanvasOnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)
+        //{
+        //    var tile = (Tile)sender.DataContext;
+        //    args.TrackAsyncAction(LoadAsync(sender, tile).AsAsyncAction());
+        //}
+
+        private async void CanvasOnDraw(CanvasControl sender, CanvasDrawEventArgs args)
+        {
+            var tile = (Tile)sender.DataContext;
+            //var bitmap = _tileBitmaps[tile];
+            //args.DrawingSession.DrawImage(bitmap, new Rect(0, 0, TileSize, TileSize));
+
+            await DatabaseTileImageLoader.DrawTileAsync(tile, args.DrawingSession, TileSize);
+        }
+
+        private async Task LoadAsync(CanvasControl control, Tile tile)
         {
             using (var stream = await DatabaseTileImageLoader.LoadTileAsync(tile))
             {
-                if (stream == null)
-                {
-                    return;
-                }
-
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-                {
-                    var bitmap = new BitmapImage();
-                    bitmap.SetSource(stream);
-                    image.Source = bitmap;
-                });
-
-
-                //var image = new Image
-                //{
-                //    Source = bitmap,
-                //    DataContext = tile,
-                //    Stretch = Stretch.Fill
-                //};
-
-
-                //var max = Math.Pow(2, tile.ZoomLevel) - 1;
-                //if (tile.X > max || tile.Y > max)
-                //{
-                //    return null;
-                //}
-
-                //var image = new TextBlock();
-                //image.TextAlignment = TextAlignment.Left;
-                //image.HorizontalTextAlignment = TextAlignment.Left;
-                //image.HorizontalAlignment = HorizontalAlignment.Stretch;
-                //image.VerticalAlignment = VerticalAlignment.Stretch;
-                //image.Text = $"{tile.X}, {tile.Y} ({tile.ZoomLevel})";
-                //image.Width = TileSize;
-                //image.Height = TileSize;
-
-                //var border = new Border();
-                //border.Background = new SolidColorBrush(Colors.Blue);
-                //border.BorderBrush = new SolidColorBrush(Colors.Red);
-                //border.BorderThickness = new Thickness(1 / Zoom);
-                //border.Child = image;
-
-                //border.DataContext = tile;
-
-                //return image;
+                var bitmap = await CanvasBitmap.LoadAsync(control, stream);
+                _tileBitmaps[tile] = bitmap;
             }
         }
 
@@ -330,6 +321,7 @@ namespace LocalMap
 
                 var rect = new Rect(tile.X * tileSize, tile.Y * tileSize, tileSize, tileSize);
                 child.Arrange(rect);
+
             }
 
             return finalSize;

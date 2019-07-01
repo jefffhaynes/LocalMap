@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Numerics;
 using System.Threading.Tasks;
 using Windows.Storage.Streams;
+using LocalMap.Models;
 using Mapbox.Vector.Tile;
 using MapboxStyle;
-using LocalMap;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Graphics.Canvas;
 
 namespace LocalMap
 {
@@ -21,63 +19,50 @@ namespace LocalMap
         {
             LoadStyle();
 
-            //tile = new Tile(8529, 5974, 14);
+            var layers = await GetLayersAsync(tile);
 
-            const int maxZoomLevel = 14;
+            return await TileRasterer.RasterAsync(layers, _style, tile.ZoomLevel);
+        }
 
+        public static async Task DrawTileAsync(Tile tile, CanvasDrawingSession session, int tileSize)
+        {
+            LoadStyle();
+
+            var layers = await GetLayersAsync(tile);
+
+            TileRasterer.Raster(session, layers, _style, tile.ZoomLevel, tileSize);
+        }
+
+        private static async Task<List<VectorTileLayer>> GetLayersAsync(Tile tile)
+        {
+            var tileModel = await GetTileModelAsync(tile);
+
+            if (tileModel == null)
+            {
+                return null;
+            }
+
+            List<VectorTileLayer> layers;
+
+            using (var dataStream = new MemoryStream(tileModel.Data.Data))
+            using (var gzipStream = new GZipStream(dataStream, CompressionMode.Decompress))
+            {
+                layers = VectorTileParser.Parse(gzipStream);
+            }
+
+            return layers;
+        }
+
+        private static async Task<TileModel> GetTileModelAsync(Tile tile)
+        {
             using (var db = new DatabaseContext())
             {
-                Tile effectiveTile;
-                int overzoom = 0;
-                Vector2 overzoomOffset = Vector2.Zero;
-                if (tile.ZoomLevel > maxZoomLevel)
-                {
-                    overzoom = (int) Math.Pow(2, tile.ZoomLevel - maxZoomLevel);
-                    overzoomOffset = new Vector2(tile.X % overzoom, tile.Y % overzoom);
-                    effectiveTile = new Tile(tile.X / overzoom, tile.Y / overzoom, maxZoomLevel);
-                }
-                else
-                {
-                    effectiveTile = tile;
-                }
-
-                var column = effectiveTile.X;
-                var row = (1 << effectiveTile.ZoomLevel) - effectiveTile.Y - 1;
+                var column = tile.X;
+                var row = (1 << tile.ZoomLevel) - tile.Y - 1;
 
                 var tileModel = await db.Tiles.Include(model => model.Data).FirstOrDefaultAsync(model =>
-                    model.ZoomLevel == effectiveTile.ZoomLevel && model.Column == column && model.Row == row);
-
-                if (tileModel == null)
-                {
-                    return null;
-                }
-
-                List<VectorTileLayer> layers;
-
-                using (var dataStream = new MemoryStream(tileModel.Data.Data))
-                using (var gzipStream = new GZipStream(dataStream, CompressionMode.Decompress))
-                {
-                    layers = VectorTileParser.Parse(gzipStream);
-                }
-
-                //if (overzoom > 0)
-                //{
-                //    var tileOffset = overzoomOffset / overzoom;
-                //    var size = Vector2.One / overzoom;
-
-                //    foreach (var vectorTileLayer in layers)
-                //    {
-                //        vectorTileLayer.Clip(new RectangleF(tileOffset.X, tileOffset.Y, size.X, size.Y));
-                //    }
-
-                //    if (layers.Count == 0)
-                //    {
-                //        return null;
-                //    }
-                //}
-
-                var tileOffset = overzoom > 0 ? overzoomOffset / overzoom + Vector2.One / (overzoom * 2) : Vector2.Zero;
-                return await TileRasterer.RasterAsync(layers, _style, effectiveTile.ZoomLevel, overzoom, tileOffset);
+                    model.ZoomLevel == tile.ZoomLevel && model.Column == column && model.Row == row);
+                return tileModel;
             }
         }
 

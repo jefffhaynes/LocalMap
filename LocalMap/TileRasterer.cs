@@ -19,7 +19,7 @@ namespace LocalMap
     {
         private const int Dpi = 96;
 
-        public static async Task<IRandomAccessStream> RasterAsync(List<VectorTileLayer> layers, Style style, float zoom, float overzoom, Vector2 overzoomCenter)
+        public static async Task<IRandomAccessStream> RasterAsync(List<VectorTileLayer> layers, Style style, float zoom)
         {
             var tileSize = 512;
 
@@ -29,41 +29,9 @@ namespace LocalMap
             {
                 using (var canvasRenderTarget = new CanvasRenderTarget(canvasDevice, tileSize, tileSize, Dpi))
                 {
-                    using (var session = canvasRenderTarget.CreateDrawingSession())
+                    using (CanvasDrawingSession session = canvasRenderTarget.CreateDrawingSession())
                     {
-                        //if (overzoom > 0)
-                        //{
-                        //    session.Transform = Matrix3x2.CreateScale(overzoom, overzoomCenter * tileSize);
-                        //}
-
-                        session.Antialiasing = CanvasAntialiasing.Antialiased;
-
-                        var background = Convert(style.GetBackground(0)?.Paint?.BackgroundColor?.GetValue(0));
-
-                        if (background != null)
-                        {
-                            session.FillRectangle(new Rect(0, 0, tileSize, tileSize), background.Value);
-                        }
-
-                        var collisionBoxes = new List<Polygon>();
-
-                        foreach (var styleLayer in style.Layers)
-                        {
-                            var activeLayers = layers.Where(layer => styleLayer.SourceLayer != null &&
-                                                                     styleLayer.SourceLayer.Equals(layer.Name,
-                                                                         StringComparison.CurrentCultureIgnoreCase) &&
-                                                                     (styleLayer.MinimumZoom == null ||
-                                                                      styleLayer.MinimumZoom <= zoom) &&
-                                                                     (styleLayer.MaximumZoom == null ||
-                                                                      styleLayer.MaximumZoom >= zoom));
-
-                            foreach (var layer in activeLayers)
-                            {
-                                var scale = (float) tileSize / layer.Extent;
-                                RasterLayer(session, canvasRenderTarget, zoom, layer.VectorTileFeatures, styleLayer,
-                                    scale, tileSize, collisionBoxes);
-                            }
-                        }
+                        Raster(session, layers, style, zoom, tileSize);
                     }
 
                     await canvasRenderTarget.SaveAsync(stream, CanvasBitmapFileFormat.Png);
@@ -73,7 +41,40 @@ namespace LocalMap
             return stream;
         }
 
-        private static void RasterLayer(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
+        public static void Raster(CanvasDrawingSession session, List<VectorTileLayer> layers, Style style,
+            float zoom, int tileSize)
+        {
+            session.Antialiasing = CanvasAntialiasing.Antialiased;
+
+            var background = Convert(style.GetBackground(0)?.Paint?.BackgroundColor?.GetValue(0));
+
+            if (background != null)
+            {
+                session.FillRectangle(new Rect(0, 0, tileSize, tileSize), background.Value);
+            }
+
+            var collisionBoxes = new List<Polygon>();
+
+            foreach (var styleLayer in style.Layers)
+            {
+                var activeLayers = layers.Where(layer => styleLayer.SourceLayer != null &&
+                                                         styleLayer.SourceLayer.Equals(layer.Name,
+                                                             StringComparison.CurrentCultureIgnoreCase) &&
+                                                         (styleLayer.MinimumZoom == null ||
+                                                          styleLayer.MinimumZoom <= zoom) &&
+                                                         (styleLayer.MaximumZoom == null ||
+                                                          styleLayer.MaximumZoom >= zoom));
+
+                foreach (var layer in activeLayers)
+                {
+                    var scale = (float) tileSize / layer.Extent;
+                    RasterLayer(session, zoom, layer.VectorTileFeatures, styleLayer,
+                        scale, tileSize, collisionBoxes);
+                }
+            }
+        }
+
+        private static void RasterLayer(CanvasDrawingSession session,
             float zoom, List<VectorTileFeature> features, Layer styleLayer, float scale, int tileSize,
             List<Polygon> collisionBoxes)
         {
@@ -91,14 +92,13 @@ namespace LocalMap
 
                 if (styleLayer.Filter == null || styleLayer.Filter.Evaluate(filterType.Value, feature.Id, attributes))
                 {
-                    RasterFeature(session, canvasRenderTarget, zoom, feature, scale, tileSize, collisionBoxes,
+                    RasterFeature(session, zoom, feature, scale, tileSize, collisionBoxes,
                         styleLayer, attributes);
                 }
             }
         }
 
-        private static void RasterFeature(CanvasDrawingSession session, CanvasRenderTarget canvasRenderTarget,
-            float zoom,
+        private static void RasterFeature(CanvasDrawingSession session, float zoom,
             VectorTileFeature feature, float scale, int tileSize, List<Polygon> collisionBoxes, Layer styleLayer,
             Dictionary<string, string> attributes)
         {
@@ -188,7 +188,7 @@ namespace LocalMap
                 {
                     var loop = layerType == "fill" ? CanvasFigureLoop.Closed : CanvasFigureLoop.Open;
 
-                    using (var pathBuilder = new CanvasPathBuilder(canvasRenderTarget))
+                    using (var pathBuilder = new CanvasPathBuilder(session))
                     {
                         foreach (var line in feature.Geometry)
                         {
