@@ -19,7 +19,7 @@ namespace LocalMap
         {
             LoadStyle();
 
-            var layers = await GetLayersAsync(tile);
+            var layers = await GetLayersAsync(tile).ConfigureAwait(false);
 
             return await TileRasterer.RasterAsync(layers, _style, tile.ZoomLevel);
         }
@@ -28,14 +28,14 @@ namespace LocalMap
         {
             LoadStyle();
 
-            var layers = await GetLayersAsync(tile);
+            var layers = await GetLayersAsync(tile).ConfigureAwait(false);
 
             TileRasterer.Raster(session, layers, _style, tile.ZoomLevel, tileSize);
         }
 
         private static async Task<List<VectorTileLayer>> GetLayersAsync(Tile tile)
         {
-            var tileModel = await GetTileModelAsync(tile);
+            var tileModel = await GetTileModelAsync(tile).ConfigureAwait(false);
 
             if (tileModel == null)
             {

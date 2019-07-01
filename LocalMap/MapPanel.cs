@@ -63,13 +63,7 @@ namespace LocalMap
             private set => SetValue(BoundaryProperty, value);
         }
 
-        //private readonly List<Tile> _tiles = new List<Tile>();
-
         private readonly Dictionary<Tile, UIElement> _tiles = new Dictionary<Tile, UIElement>();
-        private readonly Dictionary<Tile, CanvasBitmap> _tileBitmaps = new Dictionary<Tile, CanvasBitmap>();
-
-        //private Vector2 _zoomCenter;
-
 
         public MapPanel()
         {
@@ -139,13 +133,12 @@ namespace LocalMap
             set => SetValue(CenterProperty, value);
         }
 
-        private async void OnSizeChanged(object sender, SizeChangedEventArgs e)
+        private void OnSizeChanged(object sender, SizeChangedEventArgs e)
         {
             UpdateTransform();
-            await UpdateTilesAsync();
         }
 
-        private async void OnManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
+        private void OnManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
         {
             var delta = e.Delta.Translation;
 
@@ -155,16 +148,12 @@ namespace LocalMap
 
             UpdateTransform();
 
-            await UpdateTilesAsync();
-
             e.Handled = true;
         }
 
-        private async void ZoomPropertyChangedCallback(DependencyPropertyChangedEventArgs e)
+        private void ZoomPropertyChangedCallback(DependencyPropertyChangedEventArgs e)
         {
             UpdateTransform();
-
-            await UpdateTilesAsync();
         }
 
         private int MapSize => 2 * TileSize;
@@ -201,12 +190,13 @@ namespace LocalMap
 
             //Boundary = Mercator.Project(mapBounds, MapSize);
 
+            UpdateTiles();
         }
 
         //public Geobounds Boundary { get; private set; }
 
 
-        private async Task UpdateTilesAsync()
+        private void UpdateTiles()
         {
             var zoomLevel = (int) Zoom;
 
@@ -233,47 +223,21 @@ namespace LocalMap
 
                     if (!_tiles.ContainsKey(tile))
                     {
-                        Debug.WriteLine($"Fetching {tile}");
+                        var canvas = new CanvasControl
+                        {
+                            DataContext = tile, Width = TileSize, Height = TileSize, UseLayoutRounding = false
+                        };
 
-                        //var image = new Image
-                        //{
-                        //    DataContext = tile, Stretch = Stretch.None
-                        //};
-
-                        var canvas = new CanvasControl();
-                        canvas.DataContext = tile;
-                        canvas.Width = TileSize;
-                        canvas.Height = TileSize;
-                        canvas.UseLayoutRounding = false;
-
-                        //canvas.CreateResources += CanvasOnCreateResources;
                         canvas.Draw += CanvasOnDraw;
 
-                        var box = new Viewbox();
-                        box.Child = canvas;
-                        box.DataContext = tile;
-                        box.UseLayoutRounding = false;
-                        //var image = new Border
-                        //{
-                        //    //Child = image,
-                        //    BorderBrush = new SolidColorBrush(Colors.Purple),
-                        //    BorderThickness = new Thickness(0.5),
-                        //    DataContext = tile,
-                        //    Width = tileSize,
-                        //    Height = tileSize
-                        //};
+                        var box = new Viewbox {Child = canvas, DataContext = tile, UseLayoutRounding = false};
 
                         _tiles.Add(tile, box);
 
                         Children.Add(box);
-
-                        //var task = Task.Run(() => FetchAsync(tile, canvas));
-                        //tasks.Add(task);
                     }
                 }
             }
-
-            //await Task.WhenAll(tasks);
 
             // TODO trim outside bounds
             var toRemove = _tiles.Where(kvp => kvp.Key.ZoomLevel != zoomLevel).ToList();
@@ -283,32 +247,14 @@ namespace LocalMap
                 Children.Remove(keyValuePair.Value);
                 _tiles.Remove(keyValuePair.Key);
 
-                ((CanvasControl) ((Viewbox) keyValuePair.Value).Child).RemoveFromVisualTree();
+                ((CanvasControl)((Viewbox)keyValuePair.Value).Child).RemoveFromVisualTree();
             }
         }
-
-        //private void CanvasOnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)
-        //{
-        //    var tile = (Tile)sender.DataContext;
-        //    args.TrackAsyncAction(LoadAsync(sender, tile).AsAsyncAction());
-        //}
 
         private async void CanvasOnDraw(CanvasControl sender, CanvasDrawEventArgs args)
         {
             var tile = (Tile)sender.DataContext;
-            //var bitmap = _tileBitmaps[tile];
-            //args.DrawingSession.DrawImage(bitmap, new Rect(0, 0, TileSize, TileSize));
-
             await DatabaseTileImageLoader.DrawTileAsync(tile, args.DrawingSession, TileSize);
-        }
-
-        private async Task LoadAsync(CanvasControl control, Tile tile)
-        {
-            using (var stream = await DatabaseTileImageLoader.LoadTileAsync(tile))
-            {
-                var bitmap = await CanvasBitmap.LoadAsync(control, stream);
-                _tileBitmaps[tile] = bitmap;
-            }
         }
 
         protected override Size ArrangeOverride(Size finalSize)
@@ -333,7 +279,7 @@ namespace LocalMap
             control.ZoomPropertyChangedCallback(e);
         }
 
-        private async void CenterPropertyChangedCallback(DependencyPropertyChangedEventArgs e)
+        private void CenterPropertyChangedCallback(DependencyPropertyChangedEventArgs e)
         {
             //UpdateTransform();
             //await UpdateTilesAsync();
