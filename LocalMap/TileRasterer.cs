@@ -17,7 +17,7 @@ namespace LocalMap
 {
     public static class TileRasterer
     {
-        private const int Dpi = 96;
+        private const int Dpi = 96 * 2;
 
         public static async Task<IRandomAccessStream> RasterAsync(List<VectorTileLayer> layers, Style style, float zoom)
         {
